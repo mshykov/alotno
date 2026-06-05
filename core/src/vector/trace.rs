@@ -25,42 +25,47 @@ struct Tuning {
 }
 
 fn tuning_for(preset: Preset) -> Tuning {
+    // `path_precision` is decimal places per coordinate — the dominant factor in
+    // output size. 8 (the old Ultra value) is sub-pixel nonsense that bloated a
+    // simple icon to megabytes; 1–3 is visually identical and far smaller.
+    // For color mode, larger `layer_difference` + smaller `color_precision` +
+    // a non-trivial `filter_speckle` keep the layer/path count from exploding.
     match preset {
         Preset::Low => Tuning {
-            filter_speckle: 10,
+            filter_speckle: 12,
             color_precision: 4,
             layer_difference: 32,
             corner_threshold: 80,
             length_threshold: 6.0,
             splice_threshold: 60,
-            path_precision: 2,
+            path_precision: 1,
         },
         Preset::Medium => Tuning {
-            filter_speckle: 4,
-            color_precision: 6,
-            layer_difference: 16,
+            filter_speckle: 6,
+            color_precision: 5,
+            layer_difference: 24,
             corner_threshold: 70,
             length_threshold: 4.0,
             splice_threshold: 45,
-            path_precision: 4,
+            path_precision: 2,
         },
         Preset::High => Tuning {
-            filter_speckle: 2,
-            color_precision: 8,
-            layer_difference: 8,
+            filter_speckle: 4,
+            color_precision: 6,
+            layer_difference: 16,
             corner_threshold: 60,
-            length_threshold: 3.5,
+            length_threshold: 4.0,
             splice_threshold: 45,
-            path_precision: 6,
+            path_precision: 2,
         },
         Preset::Ultra => Tuning {
-            filter_speckle: 1,
-            color_precision: 8,
-            layer_difference: 4,
+            filter_speckle: 2,
+            color_precision: 7,
+            layer_difference: 12,
             corner_threshold: 50,
-            length_threshold: 2.5,
+            length_threshold: 3.0,
             splice_threshold: 30,
-            path_precision: 8,
+            path_precision: 3,
         },
     }
 }
