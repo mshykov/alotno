@@ -43,7 +43,7 @@ That goal drives every decision here:
                   ┌─────────────────┴───────────────────┐
                   ▼                                       ▼
         ┌──────────────────┐                  ┌────────────────────────┐
-        │ bindings/wasm    │                  │ bindings/ffi           │
+        │ bindings/wasm    │                  │ apps/app/rust          │
         │ (wasm-bindgen)   │                  │ (flutter_rust_bridge)  │
         └────────┬─────────┘                  └───────────┬────────────┘
                  ▼                                         ▼
@@ -71,7 +71,7 @@ and UI. The single nuance (pure-Rust vs. libwebp lossy WebP) is documented in
 |---|---|---|
 | [`core/`](core) | The conversion engine — single source of truth | Rust |
 | [`bindings/wasm/`](bindings/wasm) | Browser binding for the core | Rust + wasm-bindgen |
-| [`bindings/ffi/`](bindings/ffi) | Native binding for Flutter | Rust + flutter_rust_bridge |
+| [`apps/app/rust/`](apps/app/rust) | Native binding for Flutter (lives in the app per frb) | Rust + flutter_rust_bridge |
 | [`design/`](design) | Design tokens + generators | JSON → CSS/TS/Dart |
 | [`apps/web/`](apps/web) | Marketing page + in-browser converter | Astro |
 | [`apps/app/`](apps/app) | The cross-platform app (all 6 targets) | Flutter |
