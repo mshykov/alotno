@@ -3,7 +3,7 @@
 //! This crate is pure Rust and contains **all** of Alotno's conversion logic.
 //! It compiles unchanged to:
 //!   * `wasm32-unknown-unknown` for the browser (via `bindings/wasm`)
-//!   * native targets for the Flutter apps (via `bindings/ffi`)
+//!   * native targets for the Flutter apps (via `apps/app/rust`)
 //!
 //! The shells (`apps/*`) only do file I/O and UI — never conversion.
 //!

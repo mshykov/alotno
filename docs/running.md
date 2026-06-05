@@ -67,7 +67,7 @@ pnpm --filter @alotno/web dev
 cargo test  -p alotno-core              # unit tests (decode, webp roundtrip)
 cargo build -p alotno-core --release    # native build
 cargo build -p alotno-core --features libwebp   # with libwebp lossy WebP
-cargo check -p alotno-ffi               # verify the Flutter binding compiles
+(cd apps/app/rust && cargo check)       # verify the Flutter FFI binding compiles
 cargo doc   -p alotno-core --open       # browse the API
 ```
 
