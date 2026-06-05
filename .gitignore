@@ -8,6 +8,9 @@ Thumbs.db
 **/*.rs.bk
 # Cargo.lock is intentionally committed for reproducible builds.
 
+# ---- Build output (Flutter/SwiftPM can drop a build/ anywhere it's invoked) ----
+build/
+
 # ---- WASM build output ----
 bindings/wasm/pkg/
 

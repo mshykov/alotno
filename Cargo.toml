@@ -6,6 +6,9 @@ members = [
     "bindings/wasm",
     "bindings/ffi",
 ]
+# The Flutter app's Rust crate (apps/app/rust) is its own workspace — cargokit
+# builds it standalone for each mobile/desktop target.
+exclude = ["apps/app"]
 
 [workspace.package]
 version = "0.1.0"
