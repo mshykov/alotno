@@ -97,6 +97,7 @@ abstract class RustLibApi extends BaseApi {
     required List<int> pngBytes,
     required double quality,
     required bool lossless,
+    required bool mono,
   });
 
   String crateApiSimpleEngineInfo();
@@ -229,6 +230,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required List<int> pngBytes,
     required double quality,
     required bool lossless,
+    required bool mono,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -237,6 +239,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_list_prim_u_8_loose(pngBytes, serializer);
           sse_encode_f_32(quality, serializer);
           sse_encode_bool(lossless, serializer);
+          sse_encode_bool(mono, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -249,7 +252,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiSimpleConvertPngToWebpConstMeta,
-        argValues: [pngBytes, quality, lossless],
+        argValues: [pngBytes, quality, lossless, mono],
         apiImpl: this,
       ),
     );
@@ -258,7 +261,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSimpleConvertPngToWebpConstMeta =>
       const TaskConstMeta(
         debugName: "convert_png_to_webp",
-        argNames: ["pngBytes", "quality", "lossless"],
+        argNames: ["pngBytes", "quality", "lossless", "mono"],
       );
 
   @override

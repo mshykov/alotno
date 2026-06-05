@@ -47,10 +47,12 @@ Future<Uint8List> convertPngToWebp({
   required List<int> pngBytes,
   required double quality,
   required bool lossless,
+  required bool mono,
 }) => RustLib.instance.api.crateApiSimpleConvertPngToWebp(
   pngBytes: pngBytes,
   quality: quality,
   lossless: lossless,
+  mono: mono,
 );
 
 /// Bridge-friendly mirror of the core SVG options (strings map via core `parse`).
