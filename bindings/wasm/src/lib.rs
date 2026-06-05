@@ -118,8 +118,15 @@ pub fn png_to_dxf_wasm(png_bytes: &[u8], options_js: JsValue) -> Result<String, 
     png_to_dxf(png_bytes, &parse_opts(options_js)?).map_err(|e| JsError::new(&e.to_string()))
 }
 
-/// PNG bytes → WebP bytes. `lossless` works here too (canvas can't).
+/// PNG bytes → WebP bytes. `lossless` works here too (canvas can't); `mono`
+/// desaturates to grayscale.
 #[wasm_bindgen(js_name = pngToWebp)]
-pub fn png_to_webp_wasm(png_bytes: &[u8], quality: f32, lossless: bool) -> Result<Vec<u8>, JsError> {
-    png_to_webp(png_bytes, &WebpOptions { quality, lossless }).map_err(|e| JsError::new(&e.to_string()))
+pub fn png_to_webp_wasm(
+    png_bytes: &[u8],
+    quality: f32,
+    lossless: bool,
+    mono: bool,
+) -> Result<Vec<u8>, JsError> {
+    png_to_webp(png_bytes, &WebpOptions { quality, lossless, grayscale: mono })
+        .map_err(|e| JsError::new(&e.to_string()))
 }

@@ -78,7 +78,7 @@
     pngToPdf: (b: Uint8Array, o?: Opts) => Uint8Array;
     pngToEps: (b: Uint8Array, o?: Opts) => string;
     pngToDxf: (b: Uint8Array, o?: Opts) => string;
-    pngToWebp: (b: Uint8Array, quality: number, lossless: boolean) => Uint8Array;
+    pngToWebp: (b: Uint8Array, quality: number, lossless: boolean, mono: boolean) => Uint8Array;
   };
 
   const status = document.getElementById("status")!;
@@ -143,7 +143,11 @@
   );
   document.querySelector('button[data-fmt="webp"]')!.addEventListener("click", () =>
     run(() =>
-      download("alotno.webp", core!.pngToWebp(pngBytes!, 82, losslessBox.checked), "image/webp"),
+      download(
+        "alotno.webp",
+        core!.pngToWebp(pngBytes!, 82, losslessBox.checked, opts.colorMode === "mono"),
+        "image/webp",
+      ),
     ),
   );
 </script>

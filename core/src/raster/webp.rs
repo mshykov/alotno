@@ -16,10 +16,38 @@ use crate::decode::RgbaImage;
 use crate::options::{ConvertError, WebpOptions};
 
 pub(crate) fn encode(image: &RgbaImage, options: &WebpOptions) -> Result<Vec<u8>, ConvertError> {
-    if options.lossless {
-        encode_lossless_pure(image)
+    // "Mono" desaturates to grayscale before encoding (color mode applies to the
+    // raster output too, not just the vector trace).
+    let owned;
+    let img = if options.grayscale {
+        owned = to_grayscale(image);
+        &owned
     } else {
-        encode_lossy(image, options.quality)
+        image
+    };
+    if options.lossless {
+        encode_lossless_pure(img)
+    } else {
+        encode_lossy(img, options.quality)
+    }
+}
+
+/// Desaturate RGBA to grayscale (luminance), preserving alpha.
+fn to_grayscale(image: &RgbaImage) -> RgbaImage {
+    let mut px = image.pixels.clone();
+    let mut i = 0;
+    while i + 3 < px.len() {
+        let y = (0.299 * px[i] as f32 + 0.587 * px[i + 1] as f32 + 0.114 * px[i + 2] as f32)
+            .round() as u8;
+        px[i] = y;
+        px[i + 1] = y;
+        px[i + 2] = y;
+        i += 4;
+    }
+    RgbaImage {
+        width: image.width,
+        height: image.height,
+        pixels: px,
     }
 }
 

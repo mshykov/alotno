@@ -176,6 +176,7 @@ fn wire__crate__api__simple__convert_png_to_webp_impl(
             let api_png_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
             let api_quality = <f32>::sse_decode(&mut deserializer);
             let api_lossless = <bool>::sse_decode(&mut deserializer);
+            let api_mono = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
@@ -183,6 +184,7 @@ fn wire__crate__api__simple__convert_png_to_webp_impl(
                         api_png_bytes,
                         api_quality,
                         api_lossless,
+                        api_mono,
                     )?;
                     Ok(output_ok)
                 })())

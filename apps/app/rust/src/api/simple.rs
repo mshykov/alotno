@@ -111,6 +111,8 @@ pub fn convert_png_to_webp(
     png_bytes: Vec<u8>,
     quality: f32,
     lossless: bool,
+    mono: bool,
 ) -> Result<Vec<u8>, String> {
-    png_to_webp(&png_bytes, &WebpOptions { quality, lossless }).map_err(|e| e.to_string())
+    png_to_webp(&png_bytes, &WebpOptions { quality, lossless, grayscale: mono })
+        .map_err(|e| e.to_string())
 }
