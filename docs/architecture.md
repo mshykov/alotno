@@ -15,6 +15,19 @@ are authored exactly once and everything else consumes them:
 
 Everything in `apps/` is a thin shell around those two.
 
+## Repository layout
+
+| Path | What it is | Stack |
+|---|---|---|
+| [`core/`](../core) | The conversion engine — single source of truth | Rust |
+| [`bindings/wasm/`](../bindings/wasm) | Browser binding for the core | Rust + wasm-bindgen |
+| [`apps/app/rust/`](../apps/app/rust) | Native binding for Flutter (lives in the app per frb) | Rust + flutter_rust_bridge |
+| [`design/`](../design) | Design tokens + generators | JSON → CSS/TS/Dart |
+| [`apps/web/`](../apps/web) | Marketing page + in-browser converter | Astro |
+| [`apps/app/`](../apps/app) | The cross-platform app (all 6 targets) | Flutter |
+| [`docs/`](.) | Architecture, features, running, releasing, roadmap | Markdown |
+| [`legacy/`](../legacy) | The original Electron Mac prototype, kept for reference | Electron |
+
 ## Layer 1 — the engine (`core/`)
 
 Pure Rust, no platform assumptions. One decode stage (PNG → RGBA) feeds two
