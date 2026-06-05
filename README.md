@@ -1,105 +1,57 @@
 <div align="center">
 
+<img src="design/brand/alotno-logo.webp" width="180" alt="Alotno logo" />
+
 # Alotno
 
-**One image-conversion engine. Every platform. Identical design.**
+**Convert PNG to SVG, PDF, EPS, DXF, and WebP — fast, local, and private.**
 
-PNG → WebP · SVG (vector trace) · EPS — on the web, macOS, Windows, Linux, iOS, and Android.
+[alotno.app](https://alotno.app)
 
 </div>
 
 ---
 
-## Why this repo exists
+## What is Alotno?
 
-Alotno is a deliberately over-architected take on a simple tool. The point isn't
-the converter — it's proving that a **single developer** can ship the *same*
-product, with the *same* design and the *same* behavior, to *every* platform,
-without reimplementing the logic five times.
+Alotno turns raster **PNG** images into clean vector files and optimized image
+formats — right on your device. Drop in your PNGs, choose the formats you want,
+convert. Nothing is uploaded; everything runs locally.
 
-That goal drives every decision here:
+- **Vector out:** SVG (vector trace), PDF, EPS, DXF
+- **Raster out:** WebP — lossy or **lossless**, color or mono
+- **Batch:** drop many PNGs and convert them all at once
+- **Private by design:** 100% on-device — your images never leave your machine
+- **Native & fast:** real desktop app, not a webpage in a wrapper
+- **Everywhere:** macOS today; web, Windows, Linux, iOS & Android next
 
-- **One engine, written once.** *All* conversion logic — PNG → SVG, PDF, EPS,
-  DXF, and WebP, plus the SVG styling pipeline — lives in a Rust crate
-  ([`core/`](core)) and is compiled to **WebAssembly** for the browser and to a
-  **native library** for the desktop/mobile apps. There is exactly one
-  implementation of each conversion in this repository.
-  ([Feature support map](docs/features.md).)
-- **One design language.** The system is specified in [`DESIGN.md`](DESIGN.md)
-  and encoded in [`design/tokens.json`](design/tokens.json), which is *generated*
-  into CSS variables, TypeScript, and Dart. Every UI consumes the same source, so
-  the apps can't visually drift.
-- **One repository.** A monorepo keeps the core, the design system, and every app
-  in lockstep. The architecture is the deliverable, so it lives in one place.
+## The logo
 
-## Architecture at a glance
+A falcon whose wing dissolves from **pixels into vector line-art** — a visual pun
+on exactly what Alotno does: PNG → SVG. The mark uses the brand indigo and ships
+in several formats in [`design/brand/`](design/brand).
 
-```
-                       ┌─────────────────────────┐
-                       │   core/  (Rust crate)    │   ← the only conversion logic
-                       │ PNG→SVG·PDF·EPS·DXF·WebP  │
-                       └────────────┬────────────┘
-              compiles to ──────────┼───────────── compiles to
-                  ┌─────────────────┴───────────────────┐
-                  ▼                                       ▼
-        ┌──────────────────┐                  ┌────────────────────────┐
-        │ bindings/wasm    │                  │ apps/app/rust          │
-        │ (wasm-bindgen)   │                  │ (flutter_rust_bridge)  │
-        └────────┬─────────┘                  └───────────┬────────────┘
-                 ▼                                         ▼
-        ┌──────────────────┐                  ┌────────────────────────┐
-        │ apps/web (Astro) │                  │ apps/app (Flutter)     │
-        │ marketing + tool │                  │ macOS · Windows · Linux│
-        │                  │                  │ iOS · Android          │
-        └──────────────────┘                  └────────────────────────┘
+## Get it
 
-        design/tokens.json ──generates──▶ CSS vars · TS · Dart  (consumed by both)
-```
+- **macOS** — a signed & notarized `.dmg` you can run on any Mac (built with
+  [`scripts/release-macos.sh`](scripts/release-macos.sh)).
+- **Web** — [alotno.app](https://alotno.app): convert right in the browser, no install.
 
-### Everything converts in the core
+## Under the hood
 
-PNG → SVG (vtracer), SVG → PDF (svg2pdf), SVG → EPS (a ported formatter), and
-PNG → WebP all live in the Rust core and compile to both WASM and native. That
-keeps output **identical on every platform** — including lossless WebP, which the
-browser's `canvas.toBlob` can't produce. The only per-platform code is file I/O
-and UI. The single nuance (pure-Rust vs. libwebp lossy WebP) is documented in
-[`docs/architecture.md`](docs/architecture.md).
+One conversion engine, written once in **Rust**, compiled to **WebAssembly** for
+the web and to a **native library** for the apps — paired with a single design
+system so every platform looks and behaves identically. The architecture *is* the
+point of this project.
 
-## Layout
+Technical docs:
 
-| Path | What it is | Stack |
-|---|---|---|
-| [`core/`](core) | The conversion engine — single source of truth | Rust |
-| [`bindings/wasm/`](bindings/wasm) | Browser binding for the core | Rust + wasm-bindgen |
-| [`apps/app/rust/`](apps/app/rust) | Native binding for Flutter (lives in the app per frb) | Rust + flutter_rust_bridge |
-| [`design/`](design) | Design tokens + generators | JSON → CSS/TS/Dart |
-| [`apps/web/`](apps/web) | Marketing page + in-browser converter | Astro |
-| [`apps/app/`](apps/app) | The cross-platform app (all 6 targets) | Flutter |
-| [`docs/`](docs) | Architecture write-up (blog source material) | Markdown |
-| [`legacy/`](legacy) | The original Electron Mac prototype, kept for reference | Electron |
-
-## Roadmap
-
-- **Phase 1 — Web.** Marketing page at [alotno.app](https://alotno.app) + the
-  converter running fully in-browser via WASM. No uploads, no backend.
-- **Phase 2 — Desktop.** The Flutter app on macOS (signed + notarized), then
-  Windows and Linux from the same codebase.
-- **Phase 3 — Mobile.** iOS and Android from the same Flutter codebase.
-
-See [docs/roadmap.md](docs/roadmap.md).
-
-## Getting started
-
-Each surface has its own README with exact commands:
-
-- Core engine → [`core/README.md`](core/README.md)
-- Design tokens → [`design/README.md`](design/README.md)
-- Web app → [`apps/web/README.md`](apps/web/README.md)
-- Flutter app → [`apps/app/README.md`](apps/app/README.md)
-
-Toolchains you'll need: [Rust](https://rustup.rs) (+ `wasm-pack`),
-[Node 20+](https://nodejs.org) with `pnpm`, and the
-[Flutter SDK](https://docs.flutter.dev/get-started/install).
+- [Architecture](docs/architecture.md) — how one engine serves every platform
+- [Feature support](docs/features.md) — what each format/option does (and what's not supported)
+- [Running locally](docs/running.md) — build & dev setup
+- [Releasing (macOS)](docs/releasing-macos.md) — sign + notarize + DMG
+- [Roadmap](docs/roadmap.md)
+- [Design system](DESIGN.md) · [design tokens](design/README.md)
 
 ## License
 
