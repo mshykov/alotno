@@ -1,0 +1,68 @@
+---
+// Alotno marketing landing — single page, design-token driven.
+import "@alotno/design/css";
+import Converter from "../components/Converter.astro";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Alotno — PNG to WebP & SVG</title>
+    <meta
+      name="description"
+      content="Convert PNG to WebP and SVG right in your browser. Nothing is uploaded — conversion runs locally via WebAssembly."
+    />
+    <link rel="canonical" href="https://alotno.app/" />
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <h1>Alotno</h1>
+        <p class="tagline">PNG → WebP &amp; SVG. In your browser. Nothing uploaded.</p>
+      </header>
+
+      <Converter />
+
+      <footer>
+        <p>
+          One engine, every platform — also on
+          <a href="https://github.com/mshykov/alotno">macOS, Windows &amp; mobile</a>.
+        </p>
+      </footer>
+    </main>
+
+    <style>
+      body {
+        margin: 0;
+        font-family: var(--font-family-sans);
+        background: var(--color-neutral-50);
+        color: var(--color-neutral-900);
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: var(--space-8) var(--space-6);
+      }
+      .hero h1 {
+        font-size: var(--font-size-2xl);
+        font-weight: var(--font-weight-bold);
+        margin: 0;
+      }
+      .tagline {
+        color: var(--color-neutral-600);
+        font-size: var(--font-size-lg);
+        margin-top: var(--space-2);
+      }
+      footer {
+        margin-top: var(--space-8);
+        color: var(--color-neutral-400);
+        font-size: var(--font-size-sm);
+      }
+      a {
+        color: var(--color-brand-500);
+      }
+    </style>
+  </body>
+</html>

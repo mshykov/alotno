@@ -1,0 +1,43 @@
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Rust ----
+/target
+**/target
+**/*.rs.bk
+# Cargo.lock is intentionally committed for reproducible builds.
+
+# ---- WASM build output ----
+bindings/wasm/pkg/
+
+# ---- Node / JS ----
+node_modules/
+.pnpm-store/
+dist/
+.astro/
+.output/
+*.log
+
+# ---- Flutter / Dart ----
+apps/app/.dart_tool/
+apps/app/.flutter-plugins
+apps/app/.flutter-plugins-dependencies
+apps/app/build/
+apps/app/.idea/
+apps/app/ios/Pods/
+apps/app/macos/Pods/
+apps/app/**/Flutter/ephemeral/
+
+# ---- Generated design tokens (regenerated from design/tokens.json) ----
+design/dist/
+
+# ---- Secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- Editors ----
+.vscode/*
+!.vscode/extensions.json
+.idea/

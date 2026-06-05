@@ -1,0 +1,28 @@
+# Cargo workspace for the Alotno conversion engine and its bindings.
+[workspace]
+resolver = "2"
+members = [
+    "core",
+    "bindings/wasm",
+    "bindings/ffi",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Maksym Shykov"]
+repository = "https://github.com/mshykov/alotno"
+
+# Shared dependency versions, referenced by member crates via `workspace = true`.
+[workspace.dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
+vtracer = "0.6"
+visioncortex = "0.8"
+
+[profile.release]
+opt-level = "z"   # optimize for size — matters for the WASM payload
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

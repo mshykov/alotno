@@ -1,0 +1,149 @@
+---
+// In-browser converter. SVG via the Rust core (WASM); WebP via canvas.
+// The WASM bundle is produced by `wasm-pack build bindings/wasm --target web`.
+---
+
+<section class="card">
+  <label class="drop">
+    <input type="file" accept="image/png" id="file" hidden />
+    <span>Drop a PNG or click to choose</span>
+  </label>
+  <div class="actions">
+    <button data-fmt="svg" disabled>SVG</button>
+    <button data-fmt="pdf" disabled>PDF</button>
+    <button data-fmt="eps" disabled>EPS</button>
+    <button data-fmt="dxf" disabled>DXF</button>
+    <button data-fmt="webp" disabled>WebP</button>
+    <label class="lossless"><input type="checkbox" id="lossless" /> Lossless WebP</label>
+  </div>
+  <p class="status" id="status">Pick a PNG to start.</p>
+</section>
+
+<style>
+  .card {
+    background: var(--color-neutral-0);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    margin-top: var(--space-6);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  }
+  .drop {
+    display: block;
+    border: 2px dashed var(--color-neutral-200);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--color-neutral-600);
+    cursor: pointer;
+  }
+  .actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+  .lossless {
+    color: var(--color-neutral-600);
+    font-size: var(--font-size-sm);
+  }
+  button {
+    font: inherit;
+    padding: var(--space-2) var(--space-4);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-brand-500);
+    color: var(--color-neutral-0);
+    cursor: pointer;
+  }
+  button:disabled {
+    background: var(--color-neutral-200);
+    cursor: default;
+  }
+  .status {
+    color: var(--color-neutral-400);
+    font-size: var(--font-size-sm);
+    margin-top: var(--space-3);
+  }
+</style>
+
+<script>
+  // Every conversion runs in the Rust core (WASM) — same engine as the native
+  // apps, so output is identical and lossless WebP works in the browser.
+  // Build it first: `wasm-pack build bindings/wasm --target web`.
+  // Relative path import is allowed via vite server.fs.allow in astro.config.mjs.
+  type Opts = { preset: string; colorMode: string };
+  type Core = {
+    pngToSvg: (b: Uint8Array, o?: Opts) => string;
+    pngToPdf: (b: Uint8Array, o?: Opts) => Uint8Array;
+    pngToEps: (b: Uint8Array, o?: Opts) => string;
+    pngToDxf: (b: Uint8Array, o?: Opts) => string;
+    pngToWebp: (b: Uint8Array, quality: number, lossless: boolean) => Uint8Array;
+  };
+
+  const status = document.getElementById("status")!;
+  const fileInput = document.getElementById("file") as HTMLInputElement;
+  const losslessBox = document.getElementById("lossless") as HTMLInputElement;
+  let pngBytes: Uint8Array | null = null;
+  let core: Core | null = null;
+
+  (async function loadCore() {
+    try {
+      // @ts-expect-error generated at build time by wasm-pack (see astro.config.mjs alias)
+      const mod = await import("@wasm/alotno_wasm.js");
+      await mod.default();
+      core = mod as unknown as Core;
+    } catch {
+      status.textContent =
+        "Converter engine not built yet. Run: wasm-pack build bindings/wasm --target web";
+    }
+  })();
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    pngBytes = new Uint8Array(await file.arrayBuffer());
+    document.querySelectorAll<HTMLButtonElement>("button[data-fmt]").forEach((b) => {
+      b.disabled = false;
+    });
+    status.textContent = `Loaded ${file.name} (${pngBytes.length} bytes).`;
+  });
+
+  function download(name: string, data: BlobPart, type: string) {
+    const url = URL.createObjectURL(new Blob([data], { type }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const opts: Opts = { preset: "high", colorMode: "color" };
+
+  function run(fn: () => void) {
+    if (!pngBytes || !core) return;
+    try {
+      fn();
+    } catch (e) {
+      status.textContent = `Conversion failed: ${e}`;
+    }
+  }
+
+  document.querySelector('button[data-fmt="svg"]')!.addEventListener("click", () =>
+    run(() => download("alotno.svg", core!.pngToSvg(pngBytes!, opts), "image/svg+xml")),
+  );
+  document.querySelector('button[data-fmt="pdf"]')!.addEventListener("click", () =>
+    run(() => download("alotno.pdf", core!.pngToPdf(pngBytes!, opts), "application/pdf")),
+  );
+  document.querySelector('button[data-fmt="eps"]')!.addEventListener("click", () =>
+    run(() => download("alotno.eps", core!.pngToEps(pngBytes!, opts), "application/postscript")),
+  );
+  document.querySelector('button[data-fmt="dxf"]')!.addEventListener("click", () =>
+    run(() => download("alotno.dxf", core!.pngToDxf(pngBytes!, opts), "application/dxf")),
+  );
+  document.querySelector('button[data-fmt="webp"]')!.addEventListener("click", () =>
+    run(() =>
+      download("alotno.webp", core!.pngToWebp(pngBytes!, 82, losslessBox.checked), "image/webp"),
+    ),
+  );
+</script>

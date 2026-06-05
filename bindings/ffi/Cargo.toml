@@ -1,0 +1,17 @@
+[package]
+name = "alotno-ffi"
+description = "Native (FFI) binding for the Alotno conversion engine, consumed by Flutter."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+# cdylib for iOS/Android/desktop dynamic linking; staticlib for iOS static linking.
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+# Native platforms get libwebp-quality lossy WebP via the core's `libwebp` feature.
+alotno-core = { path = "../../core", features = ["libwebp"] }
+flutter_rust_bridge = "2"

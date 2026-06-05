@@ -1,0 +1,34 @@
+[package]
+name = "alotno-core"
+description = "Alotno's image conversion engine — the single, portable source of truth."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+# rlib so the wasm/ffi binding crates can depend on it as a normal Rust library.
+crate-type = ["rlib"]
+
+[dependencies]
+image = { workspace = true }
+# Vector tracing (PNG -> SVG)
+vtracer = { workspace = true }
+visioncortex = { workspace = true }
+# Pure-Rust WebP encoding — compiles cleanly to wasm32. Lossless is fully
+# supported; see raster/webp.rs for the lossy story.
+image-webp = "0.2"
+# Vector -> PDF (pure Rust, from the Typst team). svg2pdf re-exports the exact
+# usvg it needs (svg2pdf::usvg), so we don't depend on usvg separately.
+svg2pdf = "0.12"
+
+[features]
+default = []
+# Optional libwebp backend for best-quality LOSSY WebP on native targets.
+# OFF for WASM (the browser build stays pure-Rust). See raster/webp.rs.
+libwebp = ["dep:webp"]
+
+[dependencies.webp]
+version = "0.3"
+optional = true
