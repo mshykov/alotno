@@ -139,6 +139,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
                 pngBytes: item.bytes,
                 quality: 82,
                 lossless: _lossless,
+                mono: _colorMode == 'mono',
               );
               await File(out).writeAsBytes(b);
               len = b.length;

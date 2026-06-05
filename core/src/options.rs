@@ -242,6 +242,8 @@ pub struct WebpOptions {
     /// Lossless encoding. Always honored, even in the pure-Rust/WASM build
     /// (this is the feature `canvas.toBlob` can't provide on the web).
     pub lossless: bool,
+    /// Desaturate to grayscale before encoding ("Mono" color mode for raster).
+    pub grayscale: bool,
 }
 
 impl Default for WebpOptions {
@@ -249,6 +251,7 @@ impl Default for WebpOptions {
         WebpOptions {
             quality: 82.0,
             lossless: false,
+            grayscale: false,
         }
     }
 }
