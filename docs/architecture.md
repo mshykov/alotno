@@ -1,0 +1,109 @@
+# Alotno architecture
+
+> The product is a PNG converter. The *point* is shipping one implementation to
+> every platform. This document explains how the pieces fit — and is written to
+> double as the source for a blog post.
+
+## The thesis
+
+A single developer maintaining "the same app everywhere" usually ends up
+maintaining *N* apps that happen to look similar. Alotno refuses that. Two assets
+are authored exactly once and everything else consumes them:
+
+1. **The conversion engine** — `core/`, in Rust.
+2. **The design language** — `design/tokens.json`.
+
+Everything in `apps/` is a thin shell around those two.
+
+## Layer 1 — the engine (`core/`)
+
+Pure Rust, no platform assumptions. One decode stage (PNG → RGBA) feeds two
+output families:
+
+- **vector** — `vtracer` traces RGBA → SVG; SVG then derives **PDF** (`svg2pdf`)
+  and **EPS** (a formatter ported from the Electron prototype).
+- **raster** — RGBA → **WebP** (pure-Rust encoder; native builds can opt into
+  libwebp for lossy quality).
+
+It exposes a small API (`png_to_svg`, `png_to_pdf`, `png_to_eps`, `png_to_webp`)
+and knows nothing about WASM, Flutter, or JS. Module layout:
+`core/src/{decode,options}.rs`, `core/src/vector/{trace,pdf,eps}.rs`,
+`core/src/raster/webp.rs`.
+
+Because it's pure Rust, the *same compiled logic* runs in two very different places:
+
+```
+core (rlib)
+ ├── bindings/wasm  → wasm-bindgen → .wasm   → apps/web   (browser)
+ └── bindings/ffi   → flutter_rust_bridge    → apps/app   (native, all OSes)
+```
+
+### Every conversion lives in the core — including WebP
+
+An earlier draft kept WebP at the browser edge (`canvas.toBlob('image/webp')`)
+to save bundle size. We reversed that, because it quietly broke the project's
+core promise:
+
+- **Different encoder = different bytes.** Canvas uses the browser's WebP encoder;
+  native uses libwebp. Same PNG, same quality, *different output* — an
+  inconsistency in a tool whose whole pitch is "identical everywhere."
+- **Canvas can't do lossless WebP.** The web would silently lose a feature the
+  desktop app has.
+
+So **all conversions run in the Rust core**, on every platform:
+
+| Conversion | Web (WASM) | Native (FFI) |
+|---|---|---|
+| PNG → SVG | core (vtracer) | core (vtracer) |
+| SVG → PDF | core (svg2pdf) | core (svg2pdf) |
+| SVG → EPS | core (ported formatter) | core (ported formatter) |
+| SVG → DXF | core (lines-only writer) | core (lines-only writer) |
+| PNG → WebP | core (pure-Rust) | core (pure-Rust lossless / libwebp lossy) |
+
+For the full settings panel and what is / isn't supported (and why), see
+[features.md](features.md).
+
+The only WebP nuance is *lossy quality*: the WASM build uses a pure-Rust encoder
+(lossless is exact; lossy is approximated), while native builds enable the
+`libwebp` feature for libwebp-grade lossy. If web lossy parity ever matters,
+libwebp compiles to WASM (Squoosh-style) — same code path, different backend.
+
+The rule is now simple: **conversion logic is always in the core; the shells only
+do file I/O and UI.**
+
+## Layer 2 — the design language (`design/`)
+
+`tokens.json` → a generator → three outputs (`tokens.css`, `tokens.ts`,
+`tokens.dart`). Apps import the generated file for their platform. Change a brand
+color once; web and Flutter both move. No app hardcodes a hex or a pixel.
+
+## Layer 3 — the shells (`apps/`)
+
+- **`apps/web`** (Astro): static marketing page + an in-browser converter island
+  that loads the WASM core. No backend, no uploads — files never leave the tab.
+- **`apps/app`** (Flutter): one Dart codebase targeting macOS, Windows, Linux,
+  iOS, Android. Calls the core through the FFI bridge. Flutter renders its own UI,
+  so the design tokens give pixel parity across all six targets.
+
+## Why a monorepo
+
+The core, the bridges, the tokens, and the apps change together. A polyrepo would
+force publishing the core and tokens as packages and syncing versions across four
+repos — pure overhead for one person. One repo keeps the whole system atomic and,
+not incidentally, makes the architecture legible to anyone who clones it.
+
+## Build graph
+
+```
+design/tokens.json ──► design/dist/*           (node)
+core/ ──► bindings/wasm/pkg/                    (wasm-pack)
+core/ ──► bindings/ffi native libs             (flutter_rust_bridge, per target)
+        ├─ apps/web   = astro + tokens.css + wasm pkg
+        └─ apps/app   = flutter + tokens.dart + ffi libs
+```
+
+## What I'd write about on the blog
+
+- Compiling one Rust crate to both WASM and native FFI, and the WebP asymmetry.
+- A design-token pipeline that feeds CSS *and* Dart from one JSON file.
+- The honest trade-offs of "one codebase, every platform" as a solo developer.

@@ -1,0 +1,61 @@
+{
+  "name": "alotno",
+  "version": "1.0.0",
+  "description": "Alotno — convert PNG to WebP, SVG (vector trace), and EPS",
+  "author": "Maksym Shykov",
+  "license": "MIT",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "release": "electron-builder --publish never"
+  },
+  "build": {
+    "appId": "app.alotno",
+    "productName": "Alotno",
+    "copyright": "Copyright © 2026 Maksym Shykov",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/sharp/**",
+      "**/node_modules/@img/**"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
+      ],
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true
+    },
+    "dmg": {
+      "title": "Alotno ${version}",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    }
+  },
+  "dependencies": {
+    "potrace": "^2.1.8",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "electron": "^42.3.3",
+    "electron-builder": "^25.1.8"
+  }
+}

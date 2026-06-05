@@ -1,0 +1,16 @@
+{
+  "name": "@alotno/design",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Alotno design tokens and multi-target generators.",
+  "type": "module",
+  "exports": {
+    "./tokens.json": "./tokens.json",
+    "./css": "./dist/tokens.css",
+    "./ts": "./dist/tokens.ts"
+  },
+  "scripts": {
+    "build": "node src/build.mjs",
+    "watch": "node --watch src/build.mjs"
+  }
+}

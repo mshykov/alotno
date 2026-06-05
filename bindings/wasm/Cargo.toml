@@ -1,0 +1,27 @@
+[package]
+name = "alotno-wasm"
+description = "Browser (WASM) binding for the Alotno conversion engine."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Core without the `libwebp` feature: WebP uses the pure-Rust encoder so the
+# whole bundle stays wasm32-clean (lossless is exact; lossy is approximated).
+alotno-core = { path = "../../core" }
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
+
+[package.metadata.wasm-pack.profile.release]
+# wasm-pack's vendored wasm-opt is too old for current rustc output (rejects
+# bulk-memory, trunc-sat, etc.). Skip it for now — the bundle works unoptimized.
+# To shrink it later: `brew install binaryen` (current wasm-opt) then run
+# `wasm-opt -Oz --all-features pkg/alotno_wasm_bg.wasm -o pkg/alotno_wasm_bg.wasm`.
+wasm-opt = false
