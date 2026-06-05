@@ -34,8 +34,8 @@ Because it's pure Rust, the *same compiled logic* runs in two very different pla
 
 ```
 core (rlib)
- ├── bindings/wasm  → wasm-bindgen → .wasm   → apps/web   (browser)
- └── bindings/ffi   → flutter_rust_bridge    → apps/app   (native, all OSes)
+ ├── bindings/wasm   → wasm-bindgen → .wasm           → apps/web  (browser)
+ └── apps/app/rust   → flutter_rust_bridge (cargokit)  → apps/app  (native, all OSes)
 ```
 
 ### Every conversion lives in the core — including WebP
@@ -97,9 +97,9 @@ not incidentally, makes the architecture legible to anyone who clones it.
 ```
 design/tokens.json ──► design/dist/*           (node)
 core/ ──► bindings/wasm/pkg/                    (wasm-pack)
-core/ ──► bindings/ffi native libs             (flutter_rust_bridge, per target)
+core/ ──► apps/app/rust native libs            (flutter_rust_bridge + cargokit, per target)
         ├─ apps/web   = astro + tokens.css + wasm pkg
-        └─ apps/app   = flutter + tokens.dart + ffi libs
+        └─ apps/app   = flutter + tokens.dart + the rust lib (cargokit-built)
 ```
 
 ## What I'd write about on the blog
