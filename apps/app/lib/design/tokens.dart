@@ -1,0 +1,53 @@
+// GENERATED from design/tokens.json — do not edit by hand.
+import 'package:flutter/material.dart';
+
+class Tokens {
+  static const colorBrand500 = Color(0xFF6366F1);
+  static const colorBrand600 = Color(0xFF4F46E5);
+  static const colorBrand700 = Color(0xFF4338CA);
+  static const colorBrandSoft = Color(0xFFEEF2FF);
+  static const colorNeutral0 = Color(0xFFFFFFFF);
+  static const colorNeutral50 = Color(0xFFF8FAFC);
+  static const colorNeutral100 = Color(0xFFF1F5F9);
+  static const colorNeutral200 = Color(0xFFE2E8F0);
+  static const colorNeutral400 = Color(0xFF94A3B8);
+  static const colorNeutral600 = Color(0xFF475569);
+  static const colorNeutral900 = Color(0xFF0F172A);
+  static const colorSurfaceBase = Color(0xFFF8FAFC);
+  static const colorSurfaceSunken = Color(0xFFF1F5F9);
+  static const colorSurfaceElevated = Color(0xFFFFFFFF);
+  static const colorInkBase = Color(0xFF0F172A);
+  static const colorInkMuted = Color(0xFF475569);
+  static const colorInkSubtle = Color(0xFF94A3B8);
+  static const colorInkFaint = Color(0xFFCBD5E1);
+  static const colorOutlineBase = Color(0xFFE2E8F0);
+  static const colorOutlineStrong = Color(0xFF94A3B8);
+  static const colorStateSuccess = Color(0xFF16A34A);
+  static const colorStateSuccessSoft = Color(0xFFDCFCE7);
+  static const colorStateError = Color(0xFFDC2626);
+  static const colorStateErrorSoft = Color(0xFFFEE2E2);
+  static const colorStateWarning = Color(0xFFD97706);
+  static const fontFamilySans = "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  static const fontFamilyMono = "'JetBrains Mono', ui-monospace, 'SF Mono', monospace";
+  static const fontSizeXs = 12.0;
+  static const fontSizeSm = 13.0;
+  static const fontSizeMd = 15.0;
+  static const fontSizeLg = 18.0;
+  static const fontSizeXl = 22.0;
+  static const fontSize2xl = 28.0;
+  static const fontWeightRegular = 400.0;
+  static const fontWeightMedium = 500.0;
+  static const fontWeightSemibold = 600.0;
+  static const fontWeightBold = 700.0;
+  static const space1 = 4.0;
+  static const space2 = 8.0;
+  static const space3 = 12.0;
+  static const space4 = 16.0;
+  static const space5 = 20.0;
+  static const space6 = 24.0;
+  static const space8 = 32.0;
+  static const radiusSm = 6.0;
+  static const radiusMd = 10.0;
+  static const radiusLg = 14.0;
+  static const radiusFull = 999.0;
+}
