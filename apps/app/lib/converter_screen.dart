@@ -1,14 +1,26 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:macos_ui/macos_ui.dart';
 
 import 'design/tokens.dart';
 import 'src/rust/api/simple.dart';
 
-/// The Alotno converter: pick a PNG, choose a format, convert via the Rust core,
-/// save the result. Styled from the generated design tokens.
+const _allFormats = ['svg', 'pdf', 'eps', 'dxf', 'webp'];
+
+class _Item {
+  _Item(this.path, this.name, this.bytes, this.w, this.h);
+  final String path;
+  final String name;
+  final Uint8List bytes;
+  final int w;
+  final int h;
+  int get size => bytes.length;
+}
+
 class ConverterScreen extends StatefulWidget {
   const ConverterScreen({super.key});
 
@@ -17,13 +29,60 @@ class ConverterScreen extends StatefulWidget {
 }
 
 class _ConverterScreenState extends State<ConverterScreen> {
-  Uint8List? _png;
-  String? _name;
+  final List<_Item> _queue = [];
+  final Set<String> _formats = {'svg'};
   String _preset = 'high';
   String _colorMode = 'mono';
   bool _lossless = false;
+  String? _outDir;
+  bool _dragging = false;
   bool _busy = false;
-  String _status = 'Pick a PNG to start.';
+  String _status = 'Drop PNGs to begin.';
+
+  // ---- data helpers ----
+
+  ({int w, int h})? _pngSize(Uint8List b) {
+    if (b.length < 24) return null;
+    int be(int o) => (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
+    return (w: be(16), h: be(20));
+  }
+
+  String _human(int bytes) {
+    if (bytes >= 1024 * 1024) return '${(bytes / 1048576).toStringAsFixed(1)} MB';
+    if (bytes >= 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
+    return '$bytes B';
+  }
+
+  Future<void> _addPaths(Iterable<String> paths) async {
+    var added = 0;
+    for (final p in paths) {
+      if (!p.toLowerCase().endsWith('.png')) continue;
+      if (_queue.any((i) => i.path == p)) continue;
+      try {
+        final bytes = await File(p).readAsBytes();
+        final dim = _pngSize(bytes);
+        _queue.add(_Item(p, p.split('/').last, bytes, dim?.w ?? 0, dim?.h ?? 0));
+        added++;
+      } catch (_) {}
+    }
+    if (mounted) {
+      setState(() => _status = added > 0 ? '$added file(s) added.' : 'No new PNGs.');
+    }
+  }
+
+  Future<void> _pick() async {
+    final res = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['png'],
+      allowMultiple: true,
+    );
+    if (res != null) await _addPaths(res.files.map((f) => f.path).whereType<String>());
+  }
+
+  Future<void> _pickOutDir() async {
+    final dir = await FilePicker.getDirectoryPath(dialogTitle: 'Choose output folder');
+    if (dir != null) setState(() => _outDir = dir);
+  }
 
   TraceOptions _opts() => TraceOptions(
     preset: _preset,
@@ -43,70 +102,55 @@ class _ConverterScreenState extends State<ConverterScreen> {
     clipOverflow: false,
   );
 
-  Future<void> _pickPng() async {
-    final res = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['png'],
-      withData: true,
-    );
-    if (res == null || res.files.isEmpty) return;
-    final file = res.files.first;
-    if (file.bytes == null) return;
-    setState(() {
-      _png = file.bytes;
-      _name = file.name;
-      _status = 'Loaded ${file.name} (${file.bytes!.length} bytes).';
-    });
-  }
-
-  String _baseName() {
-    final n = _name ?? 'alotno.png';
-    final dot = n.lastIndexOf('.');
-    return dot > 0 ? n.substring(0, dot) : n;
-  }
-
-  Future<String?> _chooseSavePath(String ext) => FilePicker.saveFile(
-    dialogTitle: 'Save ${ext.toUpperCase()}',
-    fileName: '${_baseName()}.$ext',
-  );
-
-  Future<void> _saveText(String ext, String text) async {
-    final path = await _chooseSavePath(ext);
-    if (path == null) return setState(() => _status = 'Save cancelled.');
-    await File(path).writeAsString(text);
-    setState(() => _status = 'Saved ${path.split('/').last}.');
-  }
-
-  Future<void> _saveBytes(String ext, List<int> bytes) async {
-    final path = await _chooseSavePath(ext);
-    if (path == null) return setState(() => _status = 'Save cancelled.');
-    await File(path).writeAsBytes(bytes);
-    setState(() => _status = 'Saved ${path.split('/').last}.');
-  }
-
-  Future<void> _convert(String fmt) async {
-    final png = _png;
-    if (png == null || _busy) return;
+  Future<void> _convert() async {
+    final dir = _outDir;
+    if (_queue.isEmpty || _formats.isEmpty || dir == null || _busy) return;
     setState(() {
       _busy = true;
-      _status = 'Converting to ${fmt.toUpperCase()}…';
+      _status = 'Converting…';
     });
+    var totalIn = 0, totalOut = 0, count = 0;
     try {
-      switch (fmt) {
-        case 'svg':
-          await _saveText('svg', await tracePngToSvg(pngBytes: png, options: _opts()));
-        case 'eps':
-          await _saveText('eps', await convertPngToEps(pngBytes: png, options: _opts()));
-        case 'dxf':
-          await _saveText('dxf', await convertPngToDxf(pngBytes: png, options: _opts()));
-        case 'pdf':
-          await _saveBytes('pdf', await convertPngToPdf(pngBytes: png, options: _opts()));
-        case 'webp':
-          await _saveBytes(
-            'webp',
-            await convertPngToWebp(pngBytes: png, quality: 82, lossless: _lossless),
-          );
+      for (final item in _queue) {
+        final base = item.name.replaceAll(RegExp(r'\.png$', caseSensitive: false), '');
+        for (final fmt in _formats) {
+          final out = '$dir/$base.$fmt';
+          int len;
+          switch (fmt) {
+            case 'svg':
+              final s = await tracePngToSvg(pngBytes: item.bytes, options: _opts());
+              await File(out).writeAsString(s);
+              len = s.length;
+            case 'eps':
+              final s = await convertPngToEps(pngBytes: item.bytes, options: _opts());
+              await File(out).writeAsString(s);
+              len = s.length;
+            case 'dxf':
+              final s = await convertPngToDxf(pngBytes: item.bytes, options: _opts());
+              await File(out).writeAsString(s);
+              len = s.length;
+            case 'pdf':
+              final b = await convertPngToPdf(pngBytes: item.bytes, options: _opts());
+              await File(out).writeAsBytes(b);
+              len = b.length;
+            default: // webp
+              final b = await convertPngToWebp(
+                pngBytes: item.bytes,
+                quality: 82,
+                lossless: _lossless,
+              );
+              await File(out).writeAsBytes(b);
+              len = b.length;
+          }
+          totalOut += len;
+          count++;
+        }
+        totalIn += item.size;
       }
+      final savings = (_queue.length == 1 && _formats.length == 1)
+          ? '${_human(totalIn)} → ${_human(totalOut)}'
+          : '$count file(s) · ${_human(totalOut)} total';
+      setState(() => _status = 'Done — $savings');
     } catch (e) {
       setState(() => _status = 'Failed: $e');
     } finally {
@@ -114,34 +158,116 @@ class _ConverterScreenState extends State<ConverterScreen> {
     }
   }
 
+  Future<void> _reveal() async {
+    final dir = _outDir;
+    if (dir == null) return;
+    try {
+      await Process.run('open', [dir]);
+    } catch (_) {}
+  }
+
+  // ---- UI ----
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Tokens.colorSurfaceBase,
-      appBar: AppBar(
-        backgroundColor: Tokens.colorSurfaceElevated,
-        title: const Text('Alotno', style: TextStyle(fontWeight: FontWeight.w700)),
+    final t = MacosTheme.of(context);
+    final isDark = t.brightness == Brightness.dark;
+    final accent = isDark ? const Color(0xFF818CF8) : Tokens.colorBrand500;
+    final sunken = isDark ? const Color(0xFF0F172A) : Tokens.colorSurfaceSunken;
+    final outline = isDark ? const Color(0xFF334155) : Tokens.colorOutlineStrong;
+    final muted = isDark ? const Color(0xFF94A3B8) : Tokens.colorInkMuted;
+    final body = t.typography.body;
+
+    return MacosWindow(
+      child: MacosScaffold(
+        toolBar: ToolBar(
+          title: const Text('Alotno'),
+          titleWidth: 200,
+          actions: [
+            ToolBarIconButton(
+              label: 'Clear queue',
+              icon: const MacosIcon(CupertinoIcons.trash),
+              showLabel: false,
+              onPressed: _queue.isEmpty || _busy
+                  ? null
+                  : () => setState(() {
+                      _queue.clear();
+                      _status = 'Cleared.';
+                    }),
+            ),
+          ],
+        ),
+        children: [
+          ContentArea(
+            builder: (context, controller) => SingleChildScrollView(
+              controller: controller,
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 620),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _dropzone(accent, sunken, outline, muted),
+                      if (_queue.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        ..._queue.map((i) => _row(i, muted, body)),
+                      ],
+                      const SizedBox(height: 24),
+                      _label('Output formats', muted),
+                      const SizedBox(height: 8),
+                      _formatChips(accent),
+                      const SizedBox(height: 20),
+                      _label('Options', muted),
+                      const SizedBox(height: 8),
+                      _options(muted, body),
+                      const SizedBox(height: 20),
+                      _label('Save to', muted),
+                      const SizedBox(height: 8),
+                      _outputRow(muted, body),
+                      const SizedBox(height: 24),
+                      _actions(accent, muted, body),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Padding(
-            padding: EdgeInsets.all(Tokens.space6),
+    );
+  }
+
+  Widget _label(String s, Color muted) => Text(
+    s.toUpperCase(),
+    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: muted, letterSpacing: 0.5),
+  );
+
+  Widget _dropzone(Color accent, Color sunken, Color outline, Color muted) {
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _dragging = true),
+      onDragExited: (_) => setState(() => _dragging = false),
+      onDragDone: (d) {
+        setState(() => _dragging = false);
+        _addPaths(d.files.map((f) => f.path));
+      },
+      child: GestureDetector(
+        onTap: _busy ? null : _pick,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: 160,
+          decoration: BoxDecoration(
+            color: _dragging ? accent.withValues(alpha: 0.10) : sunken,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _dragging ? accent : outline, width: 2),
+          ),
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _dropzone(),
-                SizedBox(height: Tokens.space5),
-                _options(),
-                SizedBox(height: Tokens.space5),
-                _formatButtons(),
-                SizedBox(height: Tokens.space4),
-                Text(
-                  _status,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Tokens.colorInkSubtle, fontSize: Tokens.fontSizeSm),
-                ),
+                MacosIcon(CupertinoIcons.cloud_upload, size: 34, color: _dragging ? accent : muted),
+                const SizedBox(height: 8),
+                Text('Drop PNGs here, or click to choose', style: TextStyle(color: muted)),
               ],
             ),
           ),
@@ -150,99 +276,174 @@ class _ConverterScreenState extends State<ConverterScreen> {
     );
   }
 
-  Widget _dropzone() {
-    return InkWell(
-      onTap: _busy ? null : _pickPng,
-      borderRadius: BorderRadius.circular(Tokens.radiusLg),
-      child: Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: Tokens.colorSurfaceSunken,
-          borderRadius: BorderRadius.circular(Tokens.radiusLg),
-          border: Border.all(color: Tokens.colorOutlineStrong, width: 2),
-        ),
-        child: Center(
-          child: _png == null
-              ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.upload_file, size: 32, color: Tokens.colorInkSubtle),
-                    SizedBox(height: Tokens.space2),
-                    Text(
-                      'Drop a PNG, or click to choose',
-                      style: TextStyle(color: Tokens.colorInkMuted),
-                    ),
-                  ],
-                )
-              : Padding(
-                  padding: EdgeInsets.all(Tokens.space3),
-                  child: Image.memory(_png!, fit: BoxFit.contain),
-                ),
-        ),
+  Widget _row(_Item i, Color muted, TextStyle body) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.memory(i.bytes, width: 36, height: 36, fit: BoxFit.cover),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(i.name, overflow: TextOverflow.ellipsis, style: body)),
+          const SizedBox(width: 8),
+          Text(
+            '${i.w}×${i.h} · ${_human(i.size)}',
+            style: TextStyle(fontFamily: 'Menlo', fontSize: 12, color: muted),
+          ),
+          const SizedBox(width: 4),
+          MacosIconButton(
+            icon: const MacosIcon(CupertinoIcons.clear, size: 14),
+            onPressed: _busy ? null : () => setState(() => _queue.remove(i)),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _options() {
+  Widget _formatChips(Color accent) {
     return Wrap(
-      spacing: Tokens.space4,
-      runSpacing: Tokens.space3,
+      spacing: 8,
+      runSpacing: 8,
+      children: _allFormats.map((f) {
+        final on = _formats.contains(f);
+        return PushButton(
+          controlSize: ControlSize.regular,
+          secondary: !on,
+          color: on ? accent : null,
+          onPressed: _busy
+              ? null
+              : () => setState(() {
+                  on ? _formats.remove(f) : _formats.add(f);
+                }),
+          child: Text(f.toUpperCase()),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _options(Color muted, TextStyle body) {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 12,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Detail', style: TextStyle(color: Tokens.colorInkMuted)),
-            SizedBox(width: Tokens.space2),
-            DropdownButton<String>(
+            Text('Detail  ', style: TextStyle(color: muted)),
+            MacosPopupButton<String>(
               value: _preset,
               onChanged: _busy ? null : (v) => setState(() => _preset = v!),
               items: const [
-                DropdownMenuItem(value: 'low', child: Text('Coarse')),
-                DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                DropdownMenuItem(value: 'high', child: Text('Fine')),
-                DropdownMenuItem(value: 'ultra', child: Text('Super fine')),
+                MacosPopupMenuItem(value: 'low', child: Text('Coarse')),
+                MacosPopupMenuItem(value: 'medium', child: Text('Medium')),
+                MacosPopupMenuItem(value: 'high', child: Text('Fine')),
+                MacosPopupMenuItem(value: 'ultra', child: Text('Super fine')),
               ],
             ),
           ],
         ),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'mono', label: Text('Mono')),
-            ButtonSegment(value: 'posterized', label: Text('Color')),
-          ],
-          selected: {_colorMode},
-          onSelectionChanged: _busy ? null : (s) => setState(() => _colorMode = s.first),
-        ),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Checkbox(
-              value: _lossless,
-              onChanged: _busy ? null : (v) => setState(() => _lossless = v ?? false),
+            Text('Color  ', style: TextStyle(color: muted)),
+            MacosPopupButton<String>(
+              value: _colorMode,
+              onChanged: _busy ? null : (v) => setState(() => _colorMode = v!),
+              items: const [
+                MacosPopupMenuItem(value: 'mono', child: Text('Mono')),
+                MacosPopupMenuItem(value: 'posterized', child: Text('Color')),
+              ],
             ),
-            Text('Lossless WebP', style: TextStyle(color: Tokens.colorInkMuted)),
           ],
+        ),
+        // Contextual: only meaningful when WebP is a chosen output.
+        if (_formats.contains('webp'))
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MacosCheckbox(
+                value: _lossless,
+                onChanged: _busy ? null : (v) => setState(() => _lossless = v),
+              ),
+              const SizedBox(width: 6),
+              Text('Lossless WebP', style: TextStyle(color: muted)),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _outputRow(Color muted, TextStyle body) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            _outDir ?? 'No folder chosen',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Menlo',
+              fontSize: 12,
+              color: _outDir == null ? muted : body.color,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        PushButton(
+          controlSize: ControlSize.regular,
+          secondary: true,
+          onPressed: _busy ? null : _pickOutDir,
+          child: const Text('Choose…'),
         ),
       ],
     );
   }
 
-  Widget _formatButtons() {
-    final enabled = _png != null && !_busy;
-    Widget btn(String fmt) => FilledButton(
-      style: FilledButton.styleFrom(
-        backgroundColor: Tokens.colorBrand500,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Tokens.radiusSm)),
-      ),
-      onPressed: enabled ? () => _convert(fmt) : null,
-      child: Text(fmt.toUpperCase()),
-    );
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: Tokens.space3,
-      runSpacing: Tokens.space3,
-      children: [btn('svg'), btn('pdf'), btn('eps'), btn('dxf'), btn('webp')],
+  Widget _actions(Color accent, Color muted, TextStyle body) {
+    final canConvert = _queue.isNotEmpty && _formats.isNotEmpty && _outDir != null && !_busy;
+    final n = _queue.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: PushButton(
+                controlSize: ControlSize.large,
+                color: accent,
+                onPressed: canConvert ? _convert : null,
+                child: _busy
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ProgressCircle(radius: 8),
+                          SizedBox(width: 8),
+                          Text('Converting…'),
+                        ],
+                      )
+                    : Text(n <= 1 ? 'Convert' : 'Convert $n files'),
+              ),
+            ),
+            if (_outDir != null) ...[
+              const SizedBox(width: 8),
+              PushButton(
+                controlSize: ControlSize.large,
+                secondary: true,
+                onPressed: _busy ? null : _reveal,
+                child: const Text('Reveal in Finder'),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _status,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: muted, fontSize: 13),
+        ),
+      ],
     );
   }
 }
