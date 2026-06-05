@@ -110,11 +110,12 @@ class _ConverterScreenState extends State<ConverterScreen> {
       _status = 'Converting…';
     });
     var totalIn = 0, totalOut = 0, count = 0;
+    String? lastOut;
     try {
       for (final item in _queue) {
         final base = item.name.replaceAll(RegExp(r'\.png$', caseSensitive: false), '');
         for (final fmt in _formats) {
-          final out = '$dir/$base.$fmt';
+          final out = _uniquePath(dir, base, fmt);
           int len;
           switch (fmt) {
             case 'svg':
@@ -143,12 +144,13 @@ class _ConverterScreenState extends State<ConverterScreen> {
               len = b.length;
           }
           totalOut += len;
+          lastOut = out;
           count++;
         }
         totalIn += item.size;
       }
-      final savings = (_queue.length == 1 && _formats.length == 1)
-          ? '${_human(totalIn)} → ${_human(totalOut)}'
+      final savings = (count == 1)
+          ? '${lastOut!.split('/').last} · ${_human(totalIn)} → ${_human(totalOut)}'
           : '$count file(s) · ${_human(totalOut)} total';
       setState(() => _status = 'Done — $savings');
     } catch (e) {
@@ -156,6 +158,16 @@ class _ConverterScreenState extends State<ConverterScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Never overwrite: if `base.ext` exists, append " (n)" like Finder.
+  String _uniquePath(String dir, String base, String ext) {
+    if (!File('$dir/$base.$ext').existsSync()) return '$dir/$base.$ext';
+    var n = 1;
+    while (File('$dir/$base ($n).$ext').existsSync()) {
+      n++;
+    }
+    return '$dir/$base ($n).$ext';
   }
 
   Future<void> _reveal() async {
