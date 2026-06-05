@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/widgets.dart';
+import 'package:macos_ui/macos_ui.dart';
 
 import 'converter_screen.dart';
-import 'design/tokens.dart';
 import 'src/rust/frb_generated.dart';
 
 Future<void> main() async {
@@ -15,10 +16,12 @@ class AlotnoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MacosApp(
       title: 'Alotno',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Tokens.colorBrand500, useMaterial3: true),
+      themeMode: ThemeMode.system, // respect macOS appearance (light/dark)
+      theme: MacosThemeData.light(),
+      darkTheme: MacosThemeData.dark(),
       home: const ConverterScreen(),
     );
   }
