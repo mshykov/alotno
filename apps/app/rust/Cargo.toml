@@ -1,0 +1,20 @@
+[package]
+name = "rust_lib_alotno"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.12.0"
+# The conversion engine. Native builds get libwebp-quality lossy WebP.
+alotno-core = { path = "../../../core", features = ["libwebp"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
+
+# Own workspace: cargokit builds this crate standalone, so detach it from the
+# repo's Cargo workspace. The path dep to alotno-core still resolves and inherits
+# from the repo root normally.
+[workspace]
