@@ -44,3 +44,6 @@ design/dist/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Release artifacts
+*.dmg

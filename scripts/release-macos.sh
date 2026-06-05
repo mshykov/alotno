@@ -80,7 +80,9 @@ xcrun stapler staple "$DMG"
 # --- 5. verify -------------------------------------------------------------------
 echo "▸ Verifying…"
 xcrun stapler validate "$DMG"
-spctl -a -t open --context context:primary-signature -vv "$DMG" || true
+# Assess the APP (a DMG isn't code-signed; the ticket is stapled to it). Expect
+# "accepted / source=Notarized Developer ID".
+spctl -a -vvv -t execute "$APP" || true
 
 echo ""
 echo "✅ Done: $DMG"
