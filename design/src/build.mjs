@@ -32,12 +32,23 @@ const kebab = (s) => s.replace(/\./g, "-").replace(/([a-z0-9])([A-Z])/g, "$1-$2"
 const isPx = (path) => /^(font\.size|space|radius)\./.test(path) && typeof flat[path] === "number";
 
 // ---- CSS custom properties ----
-const css =
+const cssVar = ([k, v]) => `  --${kebab(k)}: ${isPx(k) ? `${v}px` : v};`;
+let css =
   `/* GENERATED from design/tokens.json — do not edit by hand. */\n:root {\n` +
-  Object.entries(flat)
-    .map(([k, v]) => `  --${kebab(k)}: ${isPx(k) ? `${v}px` : v};`)
-    .join("\n") +
+  Object.entries(flat).map(cssVar).join("\n") +
   `\n}\n`;
+
+// Dark-mode overrides (tokens.$dark). Emitted as a prefers-color-scheme block
+// AND a [data-theme="dark"] hook for an explicit toggle.
+if (tokens.$dark) {
+  const darkFlat = flatten(tokens.$dark);
+  const darkVars = Object.entries(darkFlat).map(cssVar).join("\n");
+  css +=
+    `\n@media (prefers-color-scheme: dark) {\n  :root:not([data-theme="light"]) {\n` +
+    darkVars.replace(/^/gm, "  ") +
+    `\n  }\n}\n` +
+    `\n:root[data-theme="dark"] {\n${darkVars}\n}\n`;
+}
 
 // ---- TypeScript ----
 function stripMeta(obj) {
