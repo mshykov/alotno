@@ -62,12 +62,19 @@ const ogImage = `${site}/og-image.png`;
 
     <main>
       <section class="hero">
-        <img class="logo" src="/alotno-logo.webp" width="128" height="128" alt="Alotno" />
+        <img class="logo" src="/favicon.svg" width="104" height="104" alt="Alotno" />
         <h1>Convert PNG to vectors — in your browser.</h1>
         <p class="sub">
           SVG, PDF, EPS, DXF, and WebP. Fast, batch, and 100% private —
           your images never leave your device.
         </p>
+        <div class="hero-cta">
+          <a class="dl" href="https://github.com/mshykov/alotno/releases/latest/download/Alotno-1.0.0.dmg">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-1.9 1.5-2.8 1.6-2.9-.9-1.3-2.2-1.4-2.7-1.5-1.2-.1-2.3.7-2.8.7-.6 0-1.5-.7-2.5-.7-1.3 0-2.4.7-3.1 1.9-1.3 2.3-.3 5.6.9 7.5.6.9 1.4 1.9 2.3 1.9.9 0 1.2-.6 2.3-.6 1.1 0 1.4.6 2.3.6s1.5-.9 2.1-1.7c.7-1 .9-2 .9-2-.1 0-1.8-.7-1.8-2.6zM14.7 6.3c.5-.6.8-1.5.7-2.3-.7 0-1.6.5-2.1 1.1-.5.5-.9 1.4-.8 2.2.8.1 1.6-.4 2.2-1z"/></svg>
+            Download for macOS
+          </a>
+          <span class="cta-note">free · signed &amp; notarized</span>
+        </div>
       </section>
 
       <Converter />
@@ -81,7 +88,7 @@ const ogImage = `${site}/og-image.png`;
     </main>
 
     <footer class="foot">
-      <p>One engine, every platform — also on <a href="https://github.com/mshykov/alotno">macOS, Windows &amp; mobile</a>.</p>
+      <p>Prefer a native app? <a href="https://github.com/mshykov/alotno/releases/latest/download/Alotno-1.0.0.dmg">Download for macOS</a> — Windows &amp; mobile coming soon.</p>
       <p class="muted">© 2026 Maksym Shykov · <a href="https://github.com/mshykov/alotno">Open source (AGPL-3.0)</a></p>
     </footer>
 
@@ -111,9 +118,13 @@ const ogImage = `${site}/og-image.png`;
 
       main { max-width: 720px; margin: 0 auto; padding: 0 var(--space-6) var(--space-8); }
       .hero { text-align: center; padding: var(--space-6) 0 var(--space-8); }
-      .logo { width: 128px; height: auto; }
+      .logo { width: 104px; height: 104px; border-radius: var(--radius-lg); }
       h1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); line-height: 1.15; margin: var(--space-4) 0 0; letter-spacing: -0.01em; }
       .sub { color: var(--color-ink-muted); font-size: var(--font-size-lg); max-width: 30rem; margin: var(--space-3) auto 0; line-height: 1.5; }
+      .hero-cta { margin-top: var(--space-5); display: flex; align-items: center; justify-content: center; gap: var(--space-3); flex-wrap: wrap; }
+      .dl { display: inline-flex; align-items: center; gap: var(--space-2); background: var(--color-brand-500); color: #fff; font-weight: var(--font-weight-semibold); font-size: var(--font-size-sm); padding: 10px 18px; border-radius: var(--radius-sm); }
+      .dl:hover { background: var(--color-brand-600); text-decoration: none; }
+      .cta-note { color: var(--color-ink-subtle); font-size: var(--font-size-xs); }
 
       .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); margin-top: var(--space-8); }
       .feat { background: var(--color-surface-elevated); border: 1px solid var(--color-outline-base); border-radius: var(--radius-md); padding: var(--space-5); }
