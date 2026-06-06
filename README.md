@@ -55,4 +55,4 @@ Technical docs:
 
 ## License
 
-[MIT](LICENSE) © Maksym Shykov
+[AGPL-3.0](LICENSE) © Maksym Shykov
