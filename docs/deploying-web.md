@@ -39,28 +39,25 @@ pnpm --filter @alotno/web build
 npx wrangler pages deploy apps/web/dist --project-name alotno --branch main
 ```
 
-## Alternative: automatic git deploys (optional)
+## Automatic deploys (GitHub Actions) — recommended
 
-Connect the repo in **Pages → Create → Connect to Git** for auto-deploy on push.
-The catch: Cloudflare's build container has Node but **not Rust**, so the WASM step
-must install it. Configure:
+[`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml) deploys
+to Cloudflare Pages on every push to `main` that touches the web app / core /
+bindings / design. It builds Rust→WASM in the runner (so Cloudflare doesn't need
+Rust) and uploads via Wrangler.
 
-- **Root directory:** repo root
-- **Build command:**
-  ```sh
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-    && source "$HOME/.cargo/env" && rustup target add wasm32-unknown-unknown \
-    && cargo install wasm-pack \
-    && corepack enable && pnpm install \
-    && pnpm --filter @alotno/design build \
-    && wasm-pack build bindings/wasm --target web --out-dir pkg --release \
-    && pnpm --filter @alotno/web build
-  ```
-- **Build output directory:** `apps/web/dist`
+**One-time: add two repo secrets** (Settings → Secrets and variables → Actions):
+- `CLOUDFLARE_API_TOKEN` — create at *Cloudflare → My Profile → API Tokens →
+  Create Token*, with the **"Cloudflare Pages: Edit"** permission.
+- `CLOUDFLARE_ACCOUNT_ID` — *Cloudflare dashboard → Workers & Pages → Account ID*
+  (right sidebar).
 
-This works but each build recompiles `wasm-pack` (slow, several minutes). For a
-solo project, the local `scripts/deploy-web.sh` is faster and simpler — prefer it
-unless you want push-to-deploy.
+After that, merging to `main` auto-deploys. You can also trigger it manually from
+the Actions tab (workflow_dispatch). The local `scripts/deploy-web.sh` remains for
+ad-hoc deploys.
+
+> The Pages project (`alotno`) must already exist (it does). The workflow deploys
+> to its `main` branch = production.
 
 ## Notes
 - The repo can stay **private**; Wrangler upload doesn't expose it. (Git

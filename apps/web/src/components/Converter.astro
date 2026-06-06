@@ -1,153 +1,285 @@
 ---
-// In-browser converter. SVG via the Rust core (WASM); WebP via canvas.
-// The WASM bundle is produced by `wasm-pack build bindings/wasm --target web`.
+// In-browser converter — same Rust engine (WASM) as the native apps.
+// Drag/drop or pick multiple PNGs → choose formats → convert locally → download
+// (single output downloads directly; multiple are zipped).
 ---
 
-<section class="card">
-  <label class="drop">
-    <input type="file" accept="image/png" id="file" hidden />
-    <span>Drop a PNG or click to choose</span>
+<section class="conv" id="conv">
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept="image/png" multiple hidden />
+    <div class="drop-empty" id="dropEmpty">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor"
+        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 16V4m0 0L8 8m4-4 4 4" />
+        <path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+      </svg>
+      <p class="drop-title">Drop PNGs here, or click to choose</p>
+      <p class="drop-hint">Converts on your device — nothing is uploaded</p>
+    </div>
+    <ul class="queue" id="queue" hidden></ul>
   </label>
-  <div class="actions">
-    <button data-fmt="svg" disabled>SVG</button>
-    <button data-fmt="pdf" disabled>PDF</button>
-    <button data-fmt="eps" disabled>EPS</button>
-    <button data-fmt="dxf" disabled>DXF</button>
-    <button data-fmt="webp" disabled>WebP</button>
-    <label class="lossless"><input type="checkbox" id="lossless" /> Lossless WebP</label>
+
+  <div class="controls">
+    <div class="group">
+      <span class="glabel">Output formats</span>
+      <div class="chips" id="formats">
+        <button type="button" class="chip on" data-fmt="svg">SVG</button>
+        <button type="button" class="chip" data-fmt="pdf">PDF</button>
+        <button type="button" class="chip" data-fmt="eps">EPS</button>
+        <button type="button" class="chip" data-fmt="dxf">DXF</button>
+        <button type="button" class="chip" data-fmt="webp">WebP</button>
+      </div>
+    </div>
+
+    <div class="opts">
+      <label class="opt"><span class="glabel">Detail</span>
+        <select id="preset">
+          <option value="low">Coarse</option>
+          <option value="medium">Medium</option>
+          <option value="high" selected>Fine</option>
+          <option value="ultra">Super fine</option>
+        </select>
+      </label>
+      <div class="opt"><span class="glabel">Color</span>
+        <div class="seg" id="color">
+          <button type="button" class="on" data-c="mono">Mono</button>
+          <button type="button" data-c="posterized">Color</button>
+        </div>
+      </div>
+      <label class="opt check" id="losslessRow" hidden>
+        <input type="checkbox" id="lossless" /> <span>Lossless WebP</span>
+      </label>
+    </div>
   </div>
-  <p class="status" id="status">Pick a PNG to start.</p>
+
+  <div class="actions">
+    <button type="button" class="btn-primary" id="convert" disabled>Convert</button>
+    <button type="button" class="btn-ghost" id="clear" hidden>Clear</button>
+  </div>
+  <p class="status" id="status">Drop PNGs to begin.</p>
 </section>
 
 <style>
-  .card {
-    background: var(--color-neutral-0);
-    border-radius: var(--radius-md);
+  .conv {
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-outline-base);
+    border-radius: var(--radius-lg);
     padding: var(--space-6);
-    margin-top: var(--space-6);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
   .drop {
     display: block;
-    border: 2px dashed var(--color-neutral-200);
-    border-radius: var(--radius-lg);
-    padding: var(--space-8);
+    border: 2px dashed var(--color-outline-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-sunken);
+    padding: var(--space-8) var(--space-6);
     text-align: center;
-    color: var(--color-neutral-600);
     cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
   }
-  .actions {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    margin-top: var(--space-4);
+  .drop.drag {
+    border-color: var(--color-brand-500);
+    background: var(--color-brand-soft);
   }
-  .lossless {
-    color: var(--color-neutral-600);
-    font-size: var(--font-size-sm);
+  .drop-empty { color: var(--color-ink-subtle); display: grid; justify-items: center; gap: var(--space-2); }
+  .drop-title { color: var(--color-ink-muted); font-weight: var(--font-weight-medium); margin: 0; }
+  .drop-hint { font-size: var(--font-size-xs); margin: 0; }
+  .queue { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); text-align: left; }
+  .qrow { display: flex; align-items: center; gap: var(--space-3); }
+  .qrow img { width: 34px; height: 34px; border-radius: var(--radius-sm); object-fit: cover; background: var(--color-surface-base); }
+  .qname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink-base); font-size: var(--font-size-sm); }
+  .qmeta { font-family: var(--font-family-mono); font-size: var(--font-size-xs); color: var(--color-ink-subtle); }
+  .qx { border: 0; background: none; color: var(--color-ink-subtle); cursor: pointer; font-size: 16px; padding: 0 4px; }
+  .qx:hover { color: var(--color-state-error); }
+
+  .controls { margin-top: var(--space-5); display: grid; gap: var(--space-4); }
+  .glabel { display: block; font-size: 11px; font-weight: var(--font-weight-semibold); letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-ink-subtle); margin-bottom: var(--space-2); }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .chip {
+    font: inherit; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
+    padding: 7px 16px; border-radius: var(--radius-sm); cursor: pointer;
+    border: 1px solid var(--color-outline-base); background: var(--color-surface-base); color: var(--color-ink-muted);
+    transition: all 0.1s ease;
   }
-  button {
-    font: inherit;
-    padding: var(--space-2) var(--space-4);
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: var(--color-brand-500);
-    color: var(--color-neutral-0);
-    cursor: pointer;
+  .chip.on { background: var(--color-brand-500); border-color: var(--color-brand-500); color: #fff; }
+  .opts { display: flex; flex-wrap: wrap; gap: var(--space-5); align-items: end; }
+  .opt { display: block; }
+  select { font: inherit; font-size: var(--font-size-sm); padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-outline-base); background: var(--color-surface-base); color: var(--color-ink-base); }
+  .seg { display: inline-flex; border: 1px solid var(--color-outline-base); border-radius: var(--radius-sm); overflow: hidden; }
+  .seg button { font: inherit; font-size: var(--font-size-sm); padding: 6px 14px; border: 0; background: var(--color-surface-base); color: var(--color-ink-muted); cursor: pointer; }
+  .seg button.on { background: var(--color-brand-soft); color: var(--color-brand-600); font-weight: var(--font-weight-medium); }
+  .check { display: flex; align-items: center; gap: var(--space-2); color: var(--color-ink-muted); font-size: var(--font-size-sm); }
+  .check input { accent-color: var(--color-brand-500); }
+
+  .actions { margin-top: var(--space-5); display: flex; gap: var(--space-3); }
+  .btn-primary {
+    font: inherit; font-weight: var(--font-weight-semibold); font-size: var(--font-size-md);
+    padding: 11px 22px; border: 0; border-radius: var(--radius-sm); cursor: pointer;
+    background: var(--color-brand-500); color: #fff; flex: 1; transition: background 0.1s ease;
   }
-  button:disabled {
-    background: var(--color-neutral-200);
-    cursor: default;
-  }
-  .status {
-    color: var(--color-neutral-400);
-    font-size: var(--font-size-sm);
-    margin-top: var(--space-3);
-  }
+  .btn-primary:hover:not(:disabled) { background: var(--color-brand-600); }
+  .btn-primary:disabled { background: var(--color-outline-base); color: var(--color-ink-subtle); cursor: default; }
+  .btn-ghost { font: inherit; font-size: var(--font-size-sm); border: 0; background: none; color: var(--color-ink-muted); cursor: pointer; padding: 0 var(--space-3); }
+  .status { margin: var(--space-4) 0 0; text-align: center; color: var(--color-ink-subtle); font-size: var(--font-size-sm); }
 </style>
 
 <script>
-  // Every conversion runs in the Rust core (WASM) — same engine as the native
-  // apps, so output is identical and lossless WebP works in the browser.
-  // Build it first: `wasm-pack build bindings/wasm --target web`.
-  // Relative path import is allowed via vite server.fs.allow in astro.config.mjs.
-  type Opts = { preset: string; colorMode: string };
+  import { zipSync } from "fflate";
+
   type Core = {
-    pngToSvg: (b: Uint8Array, o?: Opts) => string;
-    pngToPdf: (b: Uint8Array, o?: Opts) => Uint8Array;
-    pngToEps: (b: Uint8Array, o?: Opts) => string;
-    pngToDxf: (b: Uint8Array, o?: Opts) => string;
+    pngToSvg: (b: Uint8Array, o?: unknown) => string;
+    pngToPdf: (b: Uint8Array, o?: unknown) => Uint8Array;
+    pngToEps: (b: Uint8Array, o?: unknown) => string;
+    pngToDxf: (b: Uint8Array, o?: unknown) => string;
     pngToWebp: (b: Uint8Array, quality: number, lossless: boolean, mono: boolean) => Uint8Array;
   };
+  type Item = { name: string; bytes: Uint8Array; url: string; w: number; h: number };
 
-  const status = document.getElementById("status")!;
-  const fileInput = document.getElementById("file") as HTMLInputElement;
-  const losslessBox = document.getElementById("lossless") as HTMLInputElement;
-  let pngBytes: Uint8Array | null = null;
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const drop = $("drop"), fileInput = $<HTMLInputElement>("file"), queueEl = $("queue");
+  const dropEmpty = $("dropEmpty"), statusEl = $("status");
+  const convertBtn = $<HTMLButtonElement>("convert"), clearBtn = $("clear");
+  const losslessRow = $("losslessRow"), losslessBox = $<HTMLInputElement>("lossless");
+  const presetSel = $<HTMLSelectElement>("preset");
+
+  const queue: Item[] = [];
+  const formats = new Set<string>(["svg"]);
+  let colorMode = "mono";
   let core: Core | null = null;
+  let busy = false;
 
-  (async function loadCore() {
+  (async () => {
     try {
-      // @ts-expect-error generated at build time by wasm-pack (see astro.config.mjs alias)
+      // @ts-expect-error generated by wasm-pack (see astro.config.mjs @wasm alias)
       const mod = await import("@wasm/alotno_wasm.js");
       await mod.default();
       core = mod as unknown as Core;
     } catch {
-      status.textContent =
-        "Converter engine not built yet. Run: wasm-pack build bindings/wasm --target web";
+      statusEl.textContent = "Converter engine failed to load.";
     }
   })();
 
-  fileInput.addEventListener("change", async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
-    pngBytes = new Uint8Array(await file.arrayBuffer());
-    document.querySelectorAll<HTMLButtonElement>("button[data-fmt]").forEach((b) => {
-      b.disabled = false;
-    });
-    status.textContent = `Loaded ${file.name} (${pngBytes.length} bytes).`;
+  const human = (n: number) =>
+    n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : n >= 1024 ? Math.round(n / 1024) + " KB" : n + " B";
+
+  function pngSize(b: Uint8Array): [number, number] {
+    if (b.length < 24) return [0, 0];
+    const be = (o: number) => (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
+    return [be(16), be(20)];
+  }
+
+  function opts() {
+    return { preset: presetSel.value, colorMode, curveType: "curves" };
+  }
+
+  async function addFiles(files: FileList | File[]) {
+    for (const f of Array.from(files)) {
+      if (!f.name.toLowerCase().endsWith(".png")) continue;
+      if (queue.some((q) => q.name === f.name)) continue;
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const [w, h] = pngSize(bytes);
+      queue.push({ name: f.name, bytes, url: URL.createObjectURL(new Blob([bytes], { type: "image/png" })), w, h });
+    }
+    render();
+  }
+
+  function render() {
+    const has = queue.length > 0;
+    dropEmpty.hidden = has;
+    queueEl.hidden = !has;
+    clearBtn.hidden = !has;
+    queueEl.innerHTML = "";
+    for (const it of queue) {
+      const li = document.createElement("li");
+      li.className = "qrow";
+      li.innerHTML =
+        `<img src="${it.url}" alt="" /><span class="qname">${it.name}</span>` +
+        `<span class="qmeta">${it.w}×${it.h} · ${human(it.bytes.length)}</span>` +
+        `<button class="qx" aria-label="Remove">✕</button>`;
+      li.querySelector(".qx")!.addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const i = queue.indexOf(it); if (i >= 0) { URL.revokeObjectURL(it.url); queue.splice(i, 1); render(); }
+      });
+      queueEl.appendChild(li);
+    }
+    convertBtn.disabled = !has || formats.size === 0 || busy;
+    if (!busy) statusEl.textContent = has ? `${queue.length} file(s) ready.` : "Drop PNGs to begin.";
+  }
+
+  // drag & drop
+  ["dragenter", "dragover"].forEach((ev) =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("drag"); }));
+  ["dragleave", "drop"].forEach((ev) =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("drag"); }));
+  drop.addEventListener("drop", (e) => { const dt = (e as DragEvent).dataTransfer; if (dt?.files) addFiles(dt.files); });
+  fileInput.addEventListener("change", () => { if (fileInput.files) addFiles(fileInput.files); fileInput.value = ""; });
+
+  // format chips
+  document.querySelectorAll<HTMLButtonElement>("#formats .chip").forEach((b) =>
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      const f = b.dataset.fmt!;
+      formats.has(f) ? formats.delete(f) : formats.add(f);
+      b.classList.toggle("on", formats.has(f));
+      losslessRow.hidden = !formats.has("webp");
+      convertBtn.disabled = queue.length === 0 || formats.size === 0 || busy;
+    }));
+
+  // color segmented
+  document.querySelectorAll<HTMLButtonElement>("#color button").forEach((b) =>
+    b.addEventListener("click", (e) => {
+      e.preventDefault(); colorMode = b.dataset.c!;
+      document.querySelectorAll("#color button").forEach((x) => x.classList.toggle("on", x === b));
+    }));
+
+  clearBtn.addEventListener("click", (e) => {
+    e.preventDefault(); queue.forEach((q) => URL.revokeObjectURL(q.url)); queue.length = 0; render();
   });
 
-  function download(name: string, data: BlobPart, type: string) {
+  const enc = new TextEncoder();
+  const download = (name: string, data: BlobPart, type: string) => {
     const url = URL.createObjectURL(new Blob([data], { type }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
-  const opts: Opts = { preset: "high", colorMode: "color" };
-
-  function run(fn: () => void) {
-    if (!pngBytes || !core) return;
+  convertBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (!core || !queue.length || !formats.size || busy) return;
+    busy = true; convertBtn.disabled = true;
+    statusEl.textContent = "Converting…";
+    const out: Record<string, Uint8Array> = {};
+    let inBytes = 0, outBytes = 0;
     try {
-      fn();
-    } catch (e) {
-      status.textContent = `Conversion failed: ${e}`;
+      for (const it of queue) {
+        const base = it.name.replace(/\.png$/i, "");
+        inBytes += it.bytes.length;
+        for (const fmt of formats) {
+          let data: Uint8Array;
+          if (fmt === "svg") data = enc.encode(core.pngToSvg(it.bytes, opts()));
+          else if (fmt === "eps") data = enc.encode(core.pngToEps(it.bytes, opts()));
+          else if (fmt === "dxf") data = enc.encode(core.pngToDxf(it.bytes, opts()));
+          else if (fmt === "pdf") data = core.pngToPdf(it.bytes, opts());
+          else data = core.pngToWebp(it.bytes, 82, losslessBox.checked, colorMode === "mono");
+          out[`${base}.${fmt}`] = data;
+          outBytes += data.length;
+        }
+      }
+      const names = Object.keys(out);
+      if (names.length === 1) {
+        const [n] = names; const types: Record<string, string> = { svg: "image/svg+xml", pdf: "application/pdf", eps: "application/postscript", dxf: "image/vnd.dxf", webp: "image/webp" };
+        download(n, out[n], types[n.split(".").pop()!] || "application/octet-stream");
+        statusEl.textContent = `Done — ${n} · ${human(inBytes)} → ${human(outBytes)}`;
+      } else {
+        download("alotno-export.zip", zipSync(out), "application/zip");
+        statusEl.textContent = `Done — ${names.length} files · ${human(outBytes)} (zip)`;
+      }
+    } catch (err) {
+      statusEl.textContent = `Failed: ${err}`;
+    } finally {
+      busy = false; convertBtn.disabled = false;
     }
-  }
+  });
 
-  document.querySelector('button[data-fmt="svg"]')!.addEventListener("click", () =>
-    run(() => download("alotno.svg", core!.pngToSvg(pngBytes!, opts), "image/svg+xml")),
-  );
-  document.querySelector('button[data-fmt="pdf"]')!.addEventListener("click", () =>
-    run(() => download("alotno.pdf", core!.pngToPdf(pngBytes!, opts), "application/pdf")),
-  );
-  document.querySelector('button[data-fmt="eps"]')!.addEventListener("click", () =>
-    run(() => download("alotno.eps", core!.pngToEps(pngBytes!, opts), "application/postscript")),
-  );
-  document.querySelector('button[data-fmt="dxf"]')!.addEventListener("click", () =>
-    run(() => download("alotno.dxf", core!.pngToDxf(pngBytes!, opts), "application/dxf")),
-  );
-  document.querySelector('button[data-fmt="webp"]')!.addEventListener("click", () =>
-    run(() =>
-      download(
-        "alotno.webp",
-        core!.pngToWebp(pngBytes!, 82, losslessBox.checked, opts.colorMode === "mono"),
-        "image/webp",
-      ),
-    ),
-  );
+  render();
 </script>

@@ -1,0 +1,49 @@
+name: Deploy web
+
+# Auto-deploys apps/web to Cloudflare Pages on every push to main that touches
+# the web app or anything it's built from. Requires two repo secrets:
+#   CLOUDFLARE_API_TOKEN   — token with "Cloudflare Pages: Edit" permission
+#   CLOUDFLARE_ACCOUNT_ID  — your Cloudflare account ID
+# (See docs/deploying-web.md.)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "core/**"
+      - "bindings/wasm/**"
+      - "design/**"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    name: Build + deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate design tokens
+        run: pnpm --filter @alotno/design build
+      - name: Build WASM core
+        run: wasm-pack build bindings/wasm --target web --out-dir pkg --release
+      - name: Build site
+        run: pnpm --filter @alotno/web build
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/web/dist --project-name=alotno --branch=main

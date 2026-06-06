@@ -1,7 +1,12 @@
 ---
-// Alotno marketing landing — single page, design-token driven.
 import "@alotno/design/css";
 import Converter from "../components/Converter.astro";
+
+const site = "https://alotno.app";
+const title = "Alotno — Convert PNG to SVG, PDF, EPS, DXF & WebP";
+const description =
+  "Convert PNG to clean vectors (SVG, PDF, EPS, DXF) and optimized WebP — right in your browser. Fast, batch, and 100% private: nothing is uploaded.";
+const ogImage = `${site}/og-image.png`;
 ---
 
 <!doctype html>
@@ -9,66 +14,128 @@ import Converter from "../components/Converter.astro";
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Alotno — PNG to WebP & SVG</title>
-    <meta
-      name="description"
-      content="Convert PNG to WebP and SVG right in your browser. Nothing is uploaded — conversion runs locally via WebAssembly."
-    />
-    <link rel="canonical" href="https://alotno.app/" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={`${site}/`} />
+
+    <!-- icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#6366F1" />
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0B1120" media="(prefers-color-scheme: dark)" />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={`${site}/`} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <!-- set theme before paint (no flash) -->
+    <script is:inline>
+      const t = localStorage.getItem("theme");
+      if (t) document.documentElement.dataset.theme = t;
+    </script>
   </head>
   <body>
+    <header class="top">
+      <a class="brand" href="/">
+        <img src="/favicon.svg" width="28" height="28" alt="" />
+        <span>Alotno</span>
+      </a>
+      <nav class="navlinks">
+        <a href="https://github.com/mshykov/alotno">GitHub</a>
+        <button id="theme" class="theme" aria-label="Toggle theme" title="Toggle theme">
+          <svg class="ico-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" /></svg>
+          <svg class="ico-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+        </button>
+      </nav>
+    </header>
+
     <main>
-      <header class="hero">
-        <h1>Alotno</h1>
-        <p class="tagline">PNG → WebP &amp; SVG. In your browser. Nothing uploaded.</p>
-      </header>
+      <section class="hero">
+        <img class="logo" src="/alotno-logo.webp" width="128" height="128" alt="Alotno" />
+        <h1>Convert PNG to vectors — in your browser.</h1>
+        <p class="sub">
+          SVG, PDF, EPS, DXF, and WebP. Fast, batch, and 100% private —
+          your images never leave your device.
+        </p>
+      </section>
 
       <Converter />
 
-      <footer>
-        <p>
-          One engine, every platform — also on
-          <a href="https://github.com/mshykov/alotno">macOS, Windows &amp; mobile</a>.
-        </p>
-      </footer>
+      <section class="features">
+        <div class="feat"><h3>100% private</h3><p>Everything runs locally via WebAssembly. No uploads, no servers, no tracking.</p></div>
+        <div class="feat"><h3>Five formats</h3><p>Vector SVG, PDF, EPS, DXF — plus optimized WebP, lossy or lossless.</p></div>
+        <div class="feat"><h3>Batch ready</h3><p>Drop a whole folder of PNGs and convert them all at once.</p></div>
+        <div class="feat"><h3>One engine, everywhere</h3><p>The same Rust core powers the web, macOS, and (soon) Windows &amp; mobile.</p></div>
+      </section>
     </main>
 
+    <footer class="foot">
+      <p>One engine, every platform — also on <a href="https://github.com/mshykov/alotno">macOS, Windows &amp; mobile</a>.</p>
+      <p class="muted">© 2026 Maksym Shykov · <a href="https://github.com/mshykov/alotno">Open source (MIT)</a></p>
+    </footer>
+
     <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: var(--font-family-sans);
-        background: var(--color-neutral-50);
-        color: var(--color-neutral-900);
+        background: var(--color-surface-base);
+        color: var(--color-ink-base);
+        -webkit-font-smoothing: antialiased;
       }
-      main {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: var(--space-8) var(--space-6);
-      }
-      .hero h1 {
-        font-size: var(--font-size-2xl);
-        font-weight: var(--font-weight-bold);
-        margin: 0;
-      }
-      .tagline {
-        color: var(--color-neutral-600);
-        font-size: var(--font-size-lg);
-        margin-top: var(--space-2);
-      }
-      footer {
-        margin-top: var(--space-8);
-        color: var(--color-neutral-400);
-        font-size: var(--font-size-sm);
-      }
-      a {
-        color: var(--color-brand-500);
-      }
+      a { color: var(--color-brand-500); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      .top { display: flex; align-items: center; justify-content: space-between; max-width: 720px; margin: 0 auto; padding: var(--space-5) var(--space-6); }
+      .brand { display: flex; align-items: center; gap: var(--space-2); color: var(--color-ink-base); font-weight: var(--font-weight-bold); }
+      .brand:hover { text-decoration: none; }
+      .navlinks { display: flex; align-items: center; gap: var(--space-4); }
+      .navlinks a { color: var(--color-ink-muted); font-size: var(--font-size-sm); }
+      .theme { border: 1px solid var(--color-outline-base); background: var(--color-surface-elevated); color: var(--color-ink-muted); border-radius: var(--radius-sm); width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; }
+      .ico-moon { display: none; }
+      :root[data-theme="dark"] .ico-sun { display: none; }
+      :root[data-theme="dark"] .ico-moon { display: block; }
+      @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ico-sun { display: none; } :root:not([data-theme="light"]) .ico-moon { display: block; } }
+
+      main { max-width: 720px; margin: 0 auto; padding: 0 var(--space-6) var(--space-8); }
+      .hero { text-align: center; padding: var(--space-6) 0 var(--space-8); }
+      .logo { width: 128px; height: auto; }
+      h1 { font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); line-height: 1.15; margin: var(--space-4) 0 0; letter-spacing: -0.01em; }
+      .sub { color: var(--color-ink-muted); font-size: var(--font-size-lg); max-width: 30rem; margin: var(--space-3) auto 0; line-height: 1.5; }
+
+      .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); margin-top: var(--space-8); }
+      .feat { background: var(--color-surface-elevated); border: 1px solid var(--color-outline-base); border-radius: var(--radius-md); padding: var(--space-5); }
+      .feat h3 { margin: 0 0 var(--space-2); font-size: var(--font-size-md); }
+      .feat p { margin: 0; color: var(--color-ink-muted); font-size: var(--font-size-sm); line-height: 1.5; }
+
+      .foot { max-width: 720px; margin: 0 auto; padding: var(--space-8) var(--space-6); text-align: center; color: var(--color-ink-muted); font-size: var(--font-size-sm); border-top: 1px solid var(--color-outline-base); }
+      .foot p { margin: 0 0 var(--space-2); }
+      .muted { color: var(--color-ink-subtle); font-size: var(--font-size-xs); }
+
+      @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
     </style>
+
+    <script is:inline>
+      document.getElementById("theme")?.addEventListener("click", () => {
+        const el = document.documentElement;
+        const dark = el.dataset.theme
+          ? el.dataset.theme === "dark"
+          : matchMedia("(prefers-color-scheme: dark)").matches;
+        el.dataset.theme = dark ? "light" : "dark";
+        localStorage.setItem("theme", el.dataset.theme);
+      });
+    </script>
   </body>
 </html>

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@alotno/design": "workspace:*",
-    "astro": "^5.0.0"
+    "astro": "^5.0.0",
+    "fflate": "^0.8.3"
   }
 }
