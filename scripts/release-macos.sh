@@ -43,7 +43,7 @@ fi
 echo "✓ Notary profile: $NOTARY_PROFILE"
 
 VERSION="$(grep '^version:' "$APP_DIR/pubspec.yaml" | sed -E 's/version:[[:space:]]*([0-9.]+).*/\1/')"
-DMG="$ROOT/Alotno-$VERSION.dmg"
+DMG="$ROOT/Alotno-macOS.dmg"
 APP="$APP_DIR/build/macos/Build/Products/Release/Alotno.app"
 
 # --- 1. build --------------------------------------------------------------------
