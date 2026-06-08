@@ -23,12 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      # Same composite action CI uses — keeps the WASM build identical.
+      - name: Build WASM core
+        uses: ./.github/actions/build-wasm
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -37,8 +34,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generate design tokens
         run: pnpm --filter @alotno/design build
-      - name: Build WASM core
-        run: wasm-pack build bindings/wasm --target web --out-dir pkg --release
       - name: Build site
         run: pnpm --filter @alotno/web build
       - name: Deploy to Cloudflare Pages

@@ -262,8 +262,10 @@
   });
 
   const enc = new TextEncoder();
-  const download = (name: string, data: BlobPart, type: string) => {
-    const url = URL.createObjectURL(new Blob([data], { type }));
+  const download = (name: string, data: Uint8Array, type: string) => {
+    // Copy into a fresh ArrayBuffer-backed view: TS's Uint8Array<ArrayBufferLike>
+    // (the type wasm-bindgen/fflate produce) isn't assignable to BlobPart.
+    const url = URL.createObjectURL(new Blob([new Uint8Array(data)], { type }));
     const a = document.createElement("a"); a.href = url; a.download = name; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
