@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="design/brand/alotno-logo.webp" width="180" alt="Alotno logo" />
+<img src="design/brand/alotno-icon-1024.png" width="132" alt="Alotno logo" />
 
 # Alotno
 

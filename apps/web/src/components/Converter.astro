@@ -188,18 +188,29 @@
     dropEmpty.hidden = has;
     queueEl.hidden = !has;
     clearBtn.hidden = !has;
-    queueEl.innerHTML = "";
+    queueEl.replaceChildren();
     for (const it of queue) {
       const li = document.createElement("li");
       li.className = "qrow";
-      li.innerHTML =
-        `<img src="${it.url}" alt="" /><span class="qname">${it.name}</span>` +
-        `<span class="qmeta">${it.w}×${it.h} · ${human(it.bytes.length)}</span>` +
-        `<button class="qx" aria-label="Remove">✕</button>`;
-      li.querySelector(".qx")!.addEventListener("click", (e) => {
+      const img = document.createElement("img");
+      img.src = it.url;
+      img.alt = "";
+      const name = document.createElement("span");
+      name.className = "qname";
+      name.textContent = it.name; // textContent, not innerHTML — no injection from file names
+      const meta = document.createElement("span");
+      meta.className = "qmeta";
+      meta.textContent = `${it.w}×${it.h} · ${human(it.bytes.length)}`;
+      const x = document.createElement("button");
+      x.className = "qx";
+      x.type = "button";
+      x.setAttribute("aria-label", "Remove");
+      x.textContent = "✕";
+      x.addEventListener("click", (e) => {
         e.preventDefault(); e.stopPropagation();
         const i = queue.indexOf(it); if (i >= 0) { URL.revokeObjectURL(it.url); queue.splice(i, 1); render(); }
       });
+      li.append(img, name, meta, x);
       queueEl.appendChild(li);
     }
     convertBtn.disabled = !has || formats.size === 0 || busy;
