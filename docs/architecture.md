@@ -84,6 +84,25 @@ libwebp compiles to WASM (Squoosh-style) — same code path, different backend.
 The rule is now simple: **conversion logic is always in the core; the shells only
 do file I/O and UI.**
 
+### The core is panic-free — by contract
+
+The engine is built with `panic = "abort"` (it keeps the WASM payload small).
+That makes panics non-negotiable: on the web a panic doesn't unwind into a
+catchable `JsError` — it traps and **poisons the whole WASM module**; on native
+it would abort the host process. So the rule is:
+
+> Every public entry point returns `Result<_, ConvertError>`, and the core must
+> never panic on any input — including malformed, truncated, or hostile bytes.
+
+Concretely that means: no `unwrap`/`expect`/unchecked indexing on input-derived
+data, decode dimensions are capped before allocation (`decode::MAX_*`), the
+hand-written SVG-path parsers are total (`vector::path::parse_path`), and
+caller-supplied strings (e.g. stroke color) are validated before being written
+into output markup. The bindings (`bindings/wasm`, `apps/app/rust`) are thin
+pass-throughs that rely on this — they add no error handling of their own beyond
+mapping `ConvertError` to the host's error type. Property tests
+(`core/tests/path_parsers.rs`) fuzz the parsers to keep the guarantee honest.
+
 ## Layer 2 — the design language (`design/`)
 
 `tokens.json` → a generator → three outputs (`tokens.css`, `tokens.ts`,

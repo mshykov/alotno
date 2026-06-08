@@ -8,18 +8,13 @@
 //! string-keyed UI options without duplicating the matching logic.
 
 /// Quality/detail preset. Maps to concrete tracer parameters in `svg.rs`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Preset {
     Low,
     Medium,
+    #[default]
     High,
     Ultra,
-}
-
-impl Default for Preset {
-    fn default() -> Self {
-        Preset::High
-    }
 }
 
 impl Preset {
@@ -35,16 +30,11 @@ impl Preset {
 }
 
 /// Monochrome (black/white trace) vs. posterized (multi-color) output.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ColorMode {
+    #[default]
     Mono,
     Posterized,
-}
-
-impl Default for ColorMode {
-    fn default() -> Self {
-        ColorMode::Mono
-    }
 }
 
 impl ColorMode {
@@ -59,18 +49,13 @@ impl ColorMode {
 /// Allowed curve output. vtracer can emit straight lines (Polygon) or cubic
 /// Bézier splines (Spline). Quadratic/arcs/elliptical (vectorizer.ai's panel)
 /// are intentionally NOT offered — vtracer can't produce them. See docs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CurveType {
     /// Cubic Bézier splines.
+    #[default]
     Curves,
     /// Straight polyline segments only.
     Lines,
-}
-
-impl Default for CurveType {
-    fn default() -> Self {
-        CurveType::Curves
-    }
 }
 
 impl CurveType {
@@ -84,16 +69,11 @@ impl CurveType {
 
 /// "Shape Stacking" in the UI. Cutouts = shapes are carved out of the ones
 /// below; Stacked = opaque shapes painted on top of each other.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Stacking {
+    #[default]
     Cutouts,
     Stacked,
-}
-
-impl Default for Stacking {
-    fn default() -> Self {
-        Stacking::Cutouts
-    }
 }
 
 impl Stacking {
@@ -106,17 +86,12 @@ impl Stacking {
 }
 
 /// Target SVG profile, applied as a post-processing rewrite.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SvgVersion {
     V1_0,
+    #[default]
     V1_1,
     Tiny1_2,
-}
-
-impl Default for SvgVersion {
-    fn default() -> Self {
-        SvgVersion::V1_1
-    }
 }
 
 impl SvgVersion {
@@ -132,20 +107,15 @@ impl SvgVersion {
 /// "Draw Style": how each shape is painted. (The reference UI's "stroke shared
 /// edges once" needs shared-edge dedup geometry we don't do, so it's omitted
 /// rather than faked.)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DrawStyle {
     /// Solid filled shapes (default).
+    #[default]
     Fill,
     /// Outline each shape, no fill.
     Stroke,
     /// Fill and outline.
     Both,
-}
-
-impl Default for DrawStyle {
-    fn default() -> Self {
-        DrawStyle::Fill
-    }
 }
 
 impl DrawStyle {
@@ -161,16 +131,11 @@ impl DrawStyle {
 /// "Group By": how paths are wrapped in `<g>` elements.
 /// (Parent/Layer from the reference UI need containment hierarchy we don't
 /// compute yet, so they're omitted rather than faked.)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GroupBy {
+    #[default]
     None,
     Color,
-}
-
-impl Default for GroupBy {
-    fn default() -> Self {
-        GroupBy::None
-    }
 }
 
 impl GroupBy {
