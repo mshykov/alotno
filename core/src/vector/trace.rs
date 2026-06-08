@@ -71,8 +71,17 @@ fn tuning_for(preset: Preset) -> Tuning {
 }
 
 pub(crate) fn to_svg(image: RgbaImage, options: &SvgOptions) -> Result<String, ConvertError> {
-    let color_image = to_color_image(&image);
+    let color_image = to_color_image(&image, options);
     let t = tuning_for(options.preset);
+
+    // vtracer exposes no explicit "number of color layers" or binary-cutoff
+    // knob, so the two posterize/mono options are honored elsewhere:
+    //   * `posterize_steps` → `layer_difference` (more steps = more bands), here.
+    //   * `threshold`       → applied to the image in `to_color_image` (Mono).
+    let layer_difference = match options.color_mode {
+        ColorMode::Posterized => posterize_layer_difference(options.posterize_steps),
+        ColorMode::Mono => t.layer_difference,
+    };
 
     let config = Config {
         color_mode: match options.color_mode {
@@ -85,7 +94,7 @@ pub(crate) fn to_svg(image: RgbaImage, options: &SvgOptions) -> Result<String, C
         },
         filter_speckle: t.filter_speckle,
         color_precision: t.color_precision,
-        layer_difference: t.layer_difference,
+        layer_difference,
         mode: match options.curve_type {
             CurveType::Curves => PathSimplifyMode::Spline,
             CurveType::Lines => PathSimplifyMode::Polygon,
@@ -102,11 +111,65 @@ pub(crate) fn to_svg(image: RgbaImage, options: &SvgOptions) -> Result<String, C
     Ok(svg_postprocess::apply(svg.to_string(), options))
 }
 
-fn to_color_image(image: &RgbaImage) -> ColorImage {
+/// Map the requested posterize step count (2–8) to vtracer's `layer_difference`.
+/// vtracer has no explicit layer-count parameter; `layer_difference` inversely
+/// controls how many color bands appear, so more steps → smaller difference →
+/// more layers. Clamped to a range that stays visually sensible.
+fn posterize_layer_difference(steps: u8) -> i32 {
+    let steps = i32::from(steps.clamp(2, 8));
+    (256 / steps).clamp(16, 128)
+}
+
+/// Luminance threshold for Mono mode: pixels at or below `threshold` become
+/// black ink, the rest white; alpha is preserved so transparent areas stay
+/// background. This makes the `threshold` option actually control the mono
+/// cutoff (vtracer's Binary mode does its own clustering otherwise).
+fn binarize(pixels: &[u8], threshold: u8) -> Vec<u8> {
+    let mut out = Vec::with_capacity(pixels.len());
+    for px in pixels.chunks_exact(4) {
+        let lum = 0.299 * f32::from(px[0]) + 0.587 * f32::from(px[1]) + 0.114 * f32::from(px[2]);
+        let v = if lum <= f32::from(threshold) { 0 } else { 255 };
+        out.extend_from_slice(&[v, v, v, px[3]]);
+    }
+    out
+}
+
+fn to_color_image(image: &RgbaImage, options: &SvgOptions) -> ColorImage {
     // visioncortex ColorImage stores tightly-packed RGBA, exactly like our buffer.
+    // For Mono, binarize by the threshold first so the cutoff is user-controlled.
+    let pixels = match options.color_mode {
+        ColorMode::Mono => binarize(&image.pixels, options.threshold),
+        ColorMode::Posterized => image.pixels.clone(),
+    };
     ColorImage {
-        pixels: image.pixels.clone(),
+        pixels,
         width: image.width as usize,
         height: image.height as usize,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn posterize_steps_more_steps_more_layers() {
+        // More steps must not produce a coarser (larger) layer_difference.
+        assert!(posterize_layer_difference(8) < posterize_layer_difference(2));
+        // Clamped into the sensible band.
+        assert_eq!(posterize_layer_difference(0), 128); // clamps up to 2 steps
+        assert!((16..=128).contains(&posterize_layer_difference(8)));
+    }
+
+    #[test]
+    fn binarize_respects_threshold() {
+        // One mid-gray pixel (lum ~150).
+        let gray = [150u8, 150, 150, 255];
+        // Low threshold → pixel is above cutoff → white.
+        assert_eq!(binarize(&gray, 10)[0], 255);
+        // High threshold → pixel is at/below cutoff → black.
+        assert_eq!(binarize(&gray, 200)[0], 0);
+        // Alpha preserved.
+        assert_eq!(binarize(&gray, 200)[3], 255);
     }
 }
