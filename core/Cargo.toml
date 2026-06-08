@@ -22,6 +22,9 @@ image-webp = "0.2"
 # Vector -> PDF (pure Rust, from the Typst team). svg2pdf re-exports the exact
 # usvg it needs (svg2pdf::usvg), so we don't depend on usvg separately.
 svg2pdf = "0.12"
+# Optional: lets `OptionsDto` deserialize from a JS object. Enabled by the WASM
+# binding; the native (frb) binding doesn't need it.
+serde = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]
 # Property testing: throws thousands of malformed `d` strings at the EPS/DXF
@@ -30,6 +33,8 @@ proptest = "1"
 
 [features]
 default = []
+# Derive serde on `OptionsDto` so bindings can deserialize options from JSON/JS.
+serde = ["dep:serde"]
 # Optional libwebp backend for best-quality LOSSY WebP on native targets.
 # OFF for WASM (the browser build stays pure-Rust). See raster/webp.rs.
 libwebp = ["dep:webp"]
