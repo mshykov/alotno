@@ -6,8 +6,8 @@
 //! inside the Flutter project so cargokit can build it for each target.)
 
 use alotno_core::{
-    png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp, OptionsDto, SvgOptions,
-    WebpOptions,
+    png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp, webp_lossy_supported, OptionsDto,
+    SvgOptions, WebpOptions,
 };
 
 #[flutter_rust_bridge::frb(init)]
@@ -19,6 +19,13 @@ pub fn init_app() {
 #[flutter_rust_bridge::frb(sync)]
 pub fn engine_info() -> String {
     "Alotno engine linked ✓ (alotno-core via FFI)".to_string()
+}
+
+/// Whether this build can produce lossy WebP. `true` on native (libwebp); the
+/// UI can use it to enable a real quality control.
+#[flutter_rust_bridge::frb(sync)]
+pub fn webp_lossy_supported_native() -> bool {
+    webp_lossy_supported()
 }
 
 /// Bridge-friendly mirror of the core SVG options (strings map via core `parse`).

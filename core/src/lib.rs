@@ -76,6 +76,14 @@ pub fn png_to_webp(png_bytes: &[u8], options: &WebpOptions) -> Result<Vec<u8>, C
     raster::webp::encode(&rgba, options)
 }
 
+/// Whether this build can produce *lossy* WebP. `true` on native (libwebp),
+/// `false` in the pure-Rust/WASM build, where `WebpOptions { lossless: false }`
+/// silently falls back to lossless. The shells read this to avoid presenting a
+/// lossy/quality control that would have no effect (see docs/architecture.md).
+pub fn webp_lossy_supported() -> bool {
+    cfg!(feature = "libwebp")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

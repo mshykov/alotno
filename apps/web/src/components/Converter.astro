@@ -47,7 +47,7 @@
         </div>
       </div>
       <label class="opt check" id="losslessRow" hidden>
-        <input type="checkbox" id="lossless" /> <span>Lossless WebP</span>
+        <input type="checkbox" id="lossless" /> <span id="losslessLabel">Lossless WebP</span>
       </label>
     </div>
   </div>
@@ -132,6 +132,7 @@
     pngToEps: (b: Uint8Array, o?: unknown) => string;
     pngToDxf: (b: Uint8Array, o?: unknown) => string;
     pngToWebp: (b: Uint8Array, quality: number, lossless: boolean, mono: boolean) => Uint8Array;
+    webpLossySupported: () => boolean;
   };
   type Item = { name: string; bytes: Uint8Array; url: string; w: number; h: number };
 
@@ -140,7 +141,19 @@
   const dropEmpty = $("dropEmpty"), statusEl = $("status");
   const convertBtn = $<HTMLButtonElement>("convert"), clearBtn = $("clear");
   const losslessRow = $("losslessRow"), losslessBox = $<HTMLInputElement>("lossless");
+  const losslessLabel = $("losslessLabel");
   const presetSel = $<HTMLSelectElement>("preset");
+
+  // The web build is pure-Rust and lossless-only. When the engine reports no
+  // lossy WebP support, force + lock the lossless toggle so it isn't a silent
+  // no-op (the user would otherwise expect lossy bytes and get lossless ones).
+  function applyWebpCapability() {
+    if (core && !core.webpLossySupported()) {
+      losslessBox.checked = true;
+      losslessBox.disabled = true;
+      losslessLabel.textContent = "Lossless WebP (web exports lossless only)";
+    }
+  }
 
   const queue: Item[] = [];
   const formats = new Set<string>(["svg"]);
@@ -154,6 +167,7 @@
       const mod = await import("@wasm/alotno_wasm.js");
       await mod.default();
       core = mod as unknown as Core;
+      applyWebpCapability();
     } catch {
       statusEl.textContent = "Converter engine failed to load.";
     }
