@@ -9,7 +9,9 @@ use std::{env, fs};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let path = args.get(1).expect("usage: trace <input.png> [preset] [mono|color] [out.svg]");
+    let path = args
+        .get(1)
+        .expect("usage: trace <input.png> [preset] [mono|color] [out.svg]");
     let preset = args.get(2).map(String::as_str).unwrap_or("high");
     let mode = args.get(3).map(String::as_str).unwrap_or("mono");
 

@@ -103,8 +103,14 @@ mod tests {
 
     #[test]
     fn webp_lossless_roundtrips() {
-        let webp = png_to_webp(TINY_PNG, &WebpOptions { lossless: true, ..Default::default() })
-            .expect("encode");
+        let webp = png_to_webp(
+            TINY_PNG,
+            &WebpOptions {
+                lossless: true,
+                ..Default::default()
+            },
+        )
+        .expect("encode");
         assert!(webp.starts_with(b"RIFF"));
     }
 }

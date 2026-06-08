@@ -4,8 +4,18 @@
 //! (`legacy/electron-mac/electron/main.cjs`, `svgToEps`). Emits `<path>` geometry
 //! as PostScript. Path parsing helpers are shared in `super::path`.
 
-use super::path::{attr_str, path_elements, svg_attr_number, tokenize};
+use super::path::{attr_str, parse_path, path_elements, svg_attr_number, PathCmd};
 use crate::options::ConvertError;
+
+/// Clamp a parsed SVG dimension to a sane, finite range for the BoundingBox.
+/// Guards against NaN/inf or absurd values from a malformed `<svg>` tag.
+fn clamp_dim(v: f64) -> i64 {
+    if !v.is_finite() || v <= 0.0 {
+        1000
+    } else {
+        v.ceil().min(1_000_000.0) as i64
+    }
+}
 
 pub(crate) fn from_svg(svg: &str) -> Result<String, ConvertError> {
     let w = svg_attr_number(svg, "width").unwrap_or(1000.0);
@@ -13,7 +23,11 @@ pub(crate) fn from_svg(svg: &str) -> Result<String, ConvertError> {
 
     let mut ps = String::new();
     ps.push_str("%!PS-Adobe-3.0 EPSF-3.0\n");
-    ps.push_str(&format!("%%BoundingBox: 0 0 {} {}\n", w.ceil() as i64, h.ceil() as i64));
+    ps.push_str(&format!(
+        "%%BoundingBox: 0 0 {} {}\n",
+        clamp_dim(w),
+        clamp_dim(h)
+    ));
     ps.push_str("%%Creator: Alotno\n%%EndComments\ngsave\n");
 
     for attrs in path_elements(svg) {
@@ -27,18 +41,41 @@ pub(crate) fn from_svg(svg: &str) -> Result<String, ConvertError> {
             .and_then(|s| s.parse::<f64>().ok())
             .unwrap_or(1.0);
 
+        // SVG's default fill is black; `fill="none"` disables it. An unparseable
+        // color falls back to black rather than silently dropping the shape.
+        let fill_rgb = match fill.as_deref() {
+            Some(f) if !is_paint(f) => None,
+            Some(f) => Some(hex_to_rgb(f).unwrap_or((0.0, 0.0, 0.0))),
+            None => Some((0.0, 0.0, 0.0)),
+        };
+        let stroke_rgb = stroke
+            .as_deref()
+            .filter(|s| is_paint(s))
+            .and_then(hex_to_rgb);
+
+        // Nothing to paint → don't leave a dangling path in the PS graphics state.
+        if fill_rgb.is_none() && stroke_rgb.is_none() {
+            continue;
+        }
+
         emit_path(&mut ps, &d, h);
 
-        if let Some(rgb) = fill.as_deref().and_then(hex_to_rgb) {
-            ps.push_str(&format!("{:.3} {:.3} {:.3} setrgbcolor\n", rgb.0, rgb.1, rgb.2));
-            ps.push_str(if stroke.as_deref().map_or(false, is_paint) {
+        if let Some(rgb) = fill_rgb {
+            ps.push_str(&format!(
+                "{:.3} {:.3} {:.3} setrgbcolor\n",
+                rgb.0, rgb.1, rgb.2
+            ));
+            ps.push_str(if stroke_rgb.is_some() {
                 "gsave fill grestore\n"
             } else {
                 "fill\n"
             });
         }
-        if let Some(rgb) = stroke.as_deref().filter(|s| is_paint(s)).and_then(hex_to_rgb) {
-            ps.push_str(&format!("{:.3} {:.3} {:.3} setrgbcolor\n", rgb.0, rgb.1, rgb.2));
+        if let Some(rgb) = stroke_rgb {
+            ps.push_str(&format!(
+                "{:.3} {:.3} {:.3} setrgbcolor\n",
+                rgb.0, rgb.1, rgb.2
+            ));
             ps.push_str(&format!("{stroke_width} setlinewidth\nstroke\n"));
         }
     }
@@ -47,54 +84,32 @@ pub(crate) fn from_svg(svg: &str) -> Result<String, ConvertError> {
     Ok(ps)
 }
 
-/// Emit one path's M/L/C/Z commands as PostScript, flipping Y (PS origin = bottom).
+/// Emit one path as PostScript, flipping Y (PS origin = bottom). Parsing is
+/// delegated to the shared, panic-free [`parse_path`].
 fn emit_path(ps: &mut String, d: &str, height: f64) {
-    let tokens = tokenize(d);
     let fy = |y: f64| height - y;
-    let (mut cx, mut cy, mut sx, mut sy) = (0.0, 0.0, 0.0, 0.0);
-    let num = |t: &str| t.parse::<f64>().unwrap_or(0.0);
     ps.push_str("newpath\n");
-
-    let mut i = 0;
-    while i < tokens.len() {
-        match tokens[i].as_str() {
-            t @ ("M" | "m") => {
-                let (x, y) = (num(&tokens[i + 1]), num(&tokens[i + 2]));
-                cx = if t == "m" { cx + x } else { x };
-                cy = if t == "m" { cy + y } else { y };
-                sx = cx;
-                sy = cy;
-                ps.push_str(&format!("{:.3} {:.3} moveto\n", cx, fy(cy)));
-                i += 3;
-            }
-            t @ ("L" | "l") => {
-                let (x, y) = (num(&tokens[i + 1]), num(&tokens[i + 2]));
-                cx = if t == "l" { cx + x } else { x };
-                cy = if t == "l" { cy + y } else { y };
-                ps.push_str(&format!("{:.3} {:.3} lineto\n", cx, fy(cy)));
-                i += 3;
-            }
-            t @ ("C" | "c") => {
-                let rel = t == "c";
-                let b = |k: usize, base: f64| num(&tokens[i + k]) + if rel { base } else { 0.0 };
-                let (x1, y1) = (b(1, cx), b(2, cy));
-                let (x2, y2) = (b(3, cx), b(4, cy));
-                let (x, y) = (b(5, cx), b(6, cy));
-                ps.push_str(&format!(
-                    "{:.3} {:.3} {:.3} {:.3} {:.3} {:.3} curveto\n",
-                    x1, fy(y1), x2, fy(y2), x, fy(y)
-                ));
-                cx = x;
-                cy = y;
-                i += 7;
-            }
-            "Z" | "z" => {
-                ps.push_str("closepath\n");
-                cx = sx;
-                cy = sy;
-                i += 1;
-            }
-            _ => i += 1,
+    for cmd in parse_path(d) {
+        match cmd {
+            PathCmd::Move { x, y } => ps.push_str(&format!("{:.3} {:.3} moveto\n", x, fy(y))),
+            PathCmd::Line { x, y } => ps.push_str(&format!("{:.3} {:.3} lineto\n", x, fy(y))),
+            PathCmd::Curve {
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            } => ps.push_str(&format!(
+                "{:.3} {:.3} {:.3} {:.3} {:.3} {:.3} curveto\n",
+                x1,
+                fy(y1),
+                x2,
+                fy(y2),
+                x,
+                fy(y)
+            )),
+            PathCmd::Close => ps.push_str("closepath\n"),
         }
     }
 }
@@ -114,6 +129,10 @@ fn hex_to_rgb(h: &str) -> Option<(f64, f64, f64)> {
     if full.len() < 6 {
         return None;
     }
-    let p = |a: usize| u8::from_str_radix(&full[a..a + 2], 16).ok().map(|v| v as f64 / 255.0);
+    let p = |a: usize| {
+        u8::from_str_radix(&full[a..a + 2], 16)
+            .ok()
+            .map(|v| v as f64 / 255.0)
+    };
     Some((p(0)?, p(2)?, p(4)?))
 }
