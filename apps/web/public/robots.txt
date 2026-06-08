@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://alotno.app/sitemap.xml

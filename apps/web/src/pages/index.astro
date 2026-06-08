@@ -7,6 +7,20 @@ const title = "Alotno — Convert PNG to SVG, PDF, EPS, DXF & WebP";
 const description =
   "Convert PNG to clean vectors (SVG, PDF, EPS, DXF) and optimized WebP — right in your browser. Fast, batch, and 100% private: nothing is uploaded.";
 const ogImage = `${site}/og-image.png`;
+
+// Structured data — makes the page eligible for rich results (per Google's guide).
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Alotno",
+  url: `${site}/`,
+  description,
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Web, macOS",
+  image: ogImage,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  author: { "@type": "Person", name: "Maksym Shykov" },
+};
 ---
 
 <!doctype html>
@@ -39,6 +53,9 @@ const ogImage = `${site}/og-image.png`;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
 
+    <!-- structured data -->
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
     <!-- set theme before paint (no flash) -->
     <script is:inline>
       const t = localStorage.getItem("theme");
@@ -62,7 +79,7 @@ const ogImage = `${site}/og-image.png`;
 
     <main>
       <section class="hero">
-        <img class="logo" src="/favicon.svg" width="104" height="104" alt="Alotno" />
+        <img class="logo" src="/favicon.svg" width="104" height="104" alt="Alotno — PNG to vector converter" />
         <h1>Convert PNG to vectors — in your browser.</h1>
         <p class="sub">
           SVG, PDF, EPS, DXF, and WebP. Fast, batch, and 100% private —
@@ -79,11 +96,31 @@ const ogImage = `${site}/og-image.png`;
 
       <Converter />
 
-      <section class="features">
-        <div class="feat"><h3>100% private</h3><p>Everything runs locally via WebAssembly. No uploads, no servers, no tracking.</p></div>
-        <div class="feat"><h3>Five formats</h3><p>Vector SVG, PDF, EPS, DXF — plus optimized WebP, lossy or lossless.</p></div>
-        <div class="feat"><h3>Batch ready</h3><p>Drop a whole folder of PNGs and convert them all at once.</p></div>
-        <div class="feat"><h3>One engine, everywhere</h3><p>The same Rust core powers the web, macOS, and (soon) Windows &amp; mobile.</p></div>
+      <section class="why">
+        <h2>Why Alotno</h2>
+        <div class="features">
+          <div class="feat"><h3>100% private</h3><p>Everything runs locally via WebAssembly. No uploads, no servers, no tracking.</p></div>
+          <div class="feat"><h3>Five formats</h3><p>Vector SVG, PDF, EPS, DXF — plus optimized WebP, lossy or lossless.</p></div>
+          <div class="feat"><h3>Batch ready</h3><p>Drop a whole folder of PNGs and convert them all at once.</p></div>
+          <div class="feat"><h3>One engine, everywhere</h3><p>The same Rust core powers the web, macOS, and (soon) Windows &amp; mobile.</p></div>
+        </div>
+      </section>
+
+      <section class="how">
+        <h2>How to convert a PNG to SVG</h2>
+        <ol class="steps">
+          <li><strong>Drop your PNGs</strong> into the box above, or click to choose. Multiple files at once is fine.</li>
+          <li><strong>Pick the output</strong> — SVG, PDF, EPS, DXF, or WebP — and set the detail level and color mode.</li>
+          <li><strong>Convert.</strong> Files are traced to vectors on your own device and download instantly. Nothing is uploaded.</li>
+        </ol>
+      </section>
+
+      <section class="faq">
+        <h2>Frequently asked questions</h2>
+        <div class="qa"><h3>Is Alotno free?</h3><p>Yes — it's completely free and open source (AGPL-3.0), with no limits, watermarks, or sign-up.</p></div>
+        <div class="qa"><h3>Are my images uploaded anywhere?</h3><p>No. Conversion runs entirely in your browser via WebAssembly, so your images never leave your device.</p></div>
+        <div class="qa"><h3>Which formats can I convert PNG to?</h3><p>Vector formats SVG, PDF, EPS, and DXF, plus the WebP raster format (lossy or lossless, color or monochrome).</p></div>
+        <div class="qa"><h3>Is there a desktop app?</h3><p>Yes — a free, signed and notarized <a href="https://github.com/mshykov/alotno/releases/latest/download/Alotno-1.0.0.dmg">macOS app</a> for offline batch conversion. Windows and mobile are coming.</p></div>
       </section>
     </main>
 
@@ -126,10 +163,17 @@ const ogImage = `${site}/og-image.png`;
       .dl:hover { background: var(--color-brand-600); text-decoration: none; }
       .cta-note { color: var(--color-ink-subtle); font-size: var(--font-size-xs); }
 
-      .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); margin-top: var(--space-8); }
+      h2 { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); margin: var(--space-8) 0 var(--space-4); letter-spacing: -0.01em; }
+      .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
       .feat { background: var(--color-surface-elevated); border: 1px solid var(--color-outline-base); border-radius: var(--radius-md); padding: var(--space-5); }
       .feat h3 { margin: 0 0 var(--space-2); font-size: var(--font-size-md); }
       .feat p { margin: 0; color: var(--color-ink-muted); font-size: var(--font-size-sm); line-height: 1.5; }
+
+      .steps { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-3); color: var(--color-ink-muted); line-height: 1.5; }
+      .steps strong { color: var(--color-ink-base); }
+      .qa { padding: var(--space-4) 0; border-bottom: 1px solid var(--color-outline-base); }
+      .qa h3 { margin: 0 0 var(--space-2); font-size: var(--font-size-md); }
+      .qa p { margin: 0; color: var(--color-ink-muted); font-size: var(--font-size-sm); line-height: 1.5; }
 
       .foot { max-width: 720px; margin: 0 auto; padding: var(--space-8) var(--space-6); text-align: center; color: var(--color-ink-muted); font-size: var(--font-size-sm); border-top: 1px solid var(--color-outline-base); }
       .foot p { margin: 0 0 var(--space-2); }
