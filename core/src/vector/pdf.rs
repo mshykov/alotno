@@ -4,7 +4,7 @@
 //! handling is a non-issue and an empty font database is fine.
 //!
 //! NOTE: `svg2pdf` / `usvg` APIs move between versions. Written against
-//! svg2pdf 0.12 / usvg 0.44 — verify on first `cargo build`.
+//! svg2pdf 0.12 / usvg 0.43 — verify on first `cargo build`.
 
 use crate::options::ConvertError;
 // Use svg2pdf's own re-exported usvg so the Tree type matches its API exactly
