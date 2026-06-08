@@ -5,6 +5,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:alotno/design/tokens.dart';
 import 'package:alotno/src/rust/api/simple.dart';
@@ -55,18 +56,27 @@ class _ConverterScreenState extends State<ConverterScreen> {
 
   Future<void> _addPaths(Iterable<String> paths) async {
     var added = 0;
-    for (final p in paths) {
-      if (!p.toLowerCase().endsWith('.png')) continue;
-      if (_queue.any((i) => i.path == p)) continue;
+    var failed = 0;
+    for (final path in paths) {
+      if (!path.toLowerCase().endsWith('.png')) continue;
+      if (_queue.any((i) => i.path == path)) continue;
       try {
-        final bytes = await File(p).readAsBytes();
+        final bytes = await File(path).readAsBytes();
         final dim = _pngSize(bytes);
-        _queue.add(_Item(p, p.split('/').last, bytes, dim?.w ?? 0, dim?.h ?? 0));
+        _queue.add(_Item(path, p.basename(path), bytes, dim?.w ?? 0, dim?.h ?? 0));
         added++;
-      } catch (_) {}
+      } catch (_) {
+        failed++; // unreadable / permission denied — report rather than swallow
+      }
     }
     if (mounted) {
-      setState(() => _status = added > 0 ? '$added file(s) added.' : 'No new PNGs.');
+      setState(() {
+        if (added > 0) {
+          _status = failed > 0 ? '$added added, $failed unreadable.' : '$added file(s) added.';
+        } else {
+          _status = failed > 0 ? 'Could not read $failed file(s).' : 'No new PNGs.';
+        }
+      });
     }
   }
 
@@ -115,24 +125,25 @@ class _ConverterScreenState extends State<ConverterScreen> {
       for (final item in _queue) {
         final base = item.name.replaceAll(RegExp(r'\.png$', caseSensitive: false), '');
         for (final fmt in _formats) {
-          final out = _uniquePath(dir, base, fmt);
+          // Atomically claim a unique output path (no overwrite, no TOCTOU).
+          final file = await _createUnique(dir, base, fmt);
           int len;
           switch (fmt) {
             case 'svg':
               final s = await tracePngToSvg(pngBytes: item.bytes, options: _opts());
-              await File(out).writeAsString(s);
+              await file.writeAsString(s);
               len = s.length;
             case 'eps':
               final s = await convertPngToEps(pngBytes: item.bytes, options: _opts());
-              await File(out).writeAsString(s);
+              await file.writeAsString(s);
               len = s.length;
             case 'dxf':
               final s = await convertPngToDxf(pngBytes: item.bytes, options: _opts());
-              await File(out).writeAsString(s);
+              await file.writeAsString(s);
               len = s.length;
             case 'pdf':
               final b = await convertPngToPdf(pngBytes: item.bytes, options: _opts());
-              await File(out).writeAsBytes(b);
+              await file.writeAsBytes(b);
               len = b.length;
             default: // webp
               final b = await convertPngToWebp(
@@ -141,17 +152,17 @@ class _ConverterScreenState extends State<ConverterScreen> {
                 lossless: _lossless,
                 mono: _colorMode == 'mono',
               );
-              await File(out).writeAsBytes(b);
+              await file.writeAsBytes(b);
               len = b.length;
           }
           totalOut += len;
-          lastOut = out;
+          lastOut = file.path;
           count++;
         }
         totalIn += item.size;
       }
       final savings = (count == 1)
-          ? '${lastOut!.split('/').last} · ${_human(totalIn)} → ${_human(totalOut)}'
+          ? '${p.basename(lastOut!)} · ${_human(totalIn)} → ${_human(totalOut)}'
           : '$count file(s) · ${_human(totalOut)} total';
       setState(() => _status = 'Done — $savings');
     } catch (e) {
@@ -161,14 +172,23 @@ class _ConverterScreenState extends State<ConverterScreen> {
     }
   }
 
-  /// Never overwrite: if `base.ext` exists, append " (n)" like Finder.
-  String _uniquePath(String dir, String base, String ext) {
-    if (!File('$dir/$base.$ext').existsSync()) return '$dir/$base.$ext';
-    var n = 1;
-    while (File('$dir/$base ($n).$ext').existsSync()) {
-      n++;
+  /// Never overwrite: atomically create `base.ext`, falling back to Finder-style
+  /// " (n)" suffixes. Uses `create(exclusive: true)` (O_EXCL) so the name is
+  /// claimed atomically — there's no check-then-write gap a concurrent writer
+  /// (or a second app instance) could slip through. Async, so the filesystem
+  /// work stays off the UI isolate.
+  Future<File> _createUnique(String dir, String base, String ext) async {
+    for (var n = 0; ; n++) {
+      final name = n == 0 ? '$base.$ext' : '$base ($n).$ext';
+      final file = File(p.join(dir, name));
+      try {
+        return await file.create(exclusive: true);
+      } on FileSystemException {
+        // If it now exists, it's a name collision → try the next suffix.
+        // Otherwise (permission, missing dir, …) it's a real error → surface it.
+        if (!await file.exists()) rethrow;
+      }
     }
-    return '$dir/$base ($n).$ext';
   }
 
   Future<void> _reveal() async {
@@ -296,7 +316,16 @@ class _ConverterScreenState extends State<ConverterScreen> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: Image.memory(i.bytes, width: 36, height: 36, fit: BoxFit.cover),
+            // cacheWidth caps the decoded thumbnail to ~2x its display size, so a
+            // queue of large PNGs doesn't decode each one at full resolution.
+            child: Image.memory(
+              i.bytes,
+              width: 36,
+              height: 36,
+              fit: BoxFit.cover,
+              cacheWidth: 72,
+              cacheHeight: 72,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(child: Text(i.name, overflow: TextOverflow.ellipsis, style: body)),
