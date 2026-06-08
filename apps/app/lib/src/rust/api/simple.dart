@@ -8,6 +8,10 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`
 
+/// PNG bytes → dimensions. Conversion-adjacent parsing stays in the core.
+Future<ImageDimensions> imageDimensions({required List<int> pngBytes}) =>
+    RustLib.instance.api.crateApiSimpleImageDimensions(pngBytes: pngBytes);
+
 /// Quick proof the Dart→Rust→alotno-core chain is linked and callable.
 String engineInfo() => RustLib.instance.api.crateApiSimpleEngineInfo();
 
@@ -59,6 +63,25 @@ Future<Uint8List> convertPngToWebp({
   lossless: lossless,
   mono: mono,
 );
+
+/// PNG pixel dimensions, read by the core (no in-Dart PNG parsing).
+class ImageDimensions {
+  final int width;
+  final int height;
+
+  const ImageDimensions({required this.width, required this.height});
+
+  @override
+  int get hashCode => width.hashCode ^ height.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ImageDimensions &&
+          runtimeType == other.runtimeType &&
+          width == other.width &&
+          height == other.height;
+}
 
 /// Bridge-friendly mirror of the core SVG options (strings map via core `parse`).
 class TraceOptions {

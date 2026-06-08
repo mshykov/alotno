@@ -1,5 +1,5 @@
 name: alotno
-description: "A new Flutter project."
+description: "Alotno — convert PNG to SVG, PDF, EPS, DXF, and WebP, locally."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -44,6 +44,9 @@ dependencies:
   window_manager: ^0.5.1
   # Cross-platform path joining/basename (no hardcoded POSIX separators).
   path: ^1.9.0
+  # Sandbox-legal way to reveal the output folder (NSWorkspace under the hood),
+  # instead of spawning `open`, which the macOS App Sandbox blocks.
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:

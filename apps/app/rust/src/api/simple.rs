@@ -6,9 +6,22 @@
 //! inside the Flutter project so cargokit can build it for each target.)
 
 use alotno_core::{
-    png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp, webp_lossy_supported, OptionsDto,
-    SvgOptions, WebpOptions,
+    png_dimensions, png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp,
+    webp_lossy_supported, OptionsDto, SvgOptions, WebpOptions,
 };
+
+/// PNG pixel dimensions, read by the core (no in-Dart PNG parsing).
+pub struct ImageDimensions {
+    pub width: u32,
+    pub height: u32,
+}
+
+/// PNG bytes → dimensions. Conversion-adjacent parsing stays in the core.
+pub fn image_dimensions(png_bytes: Vec<u8>) -> Result<ImageDimensions, String> {
+    png_dimensions(&png_bytes)
+        .map(|(width, height)| ImageDimensions { width, height })
+        .map_err(|e| e.to_string())
+}
 
 #[flutter_rust_bridge::frb(init)]
 pub fn init_app() {
