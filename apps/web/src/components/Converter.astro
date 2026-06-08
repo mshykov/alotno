@@ -6,7 +6,11 @@
 
 <section class="conv" id="conv">
   <label class="drop" id="drop">
-    <input type="file" id="file" accept="image/png" multiple hidden />
+    <!-- Visually hidden but still focusable + in tab order, so keyboard and
+         screen-reader users can open the picker (Enter/Space). `hidden` would
+         remove it from the tab order entirely. -->
+    <input type="file" id="file" accept="image/png" multiple class="sr-only"
+      aria-label="Choose PNG files to convert" />
     <div class="drop-empty" id="dropEmpty">
       <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor"
         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -21,13 +25,13 @@
 
   <div class="controls">
     <div class="group">
-      <span class="glabel">Output formats</span>
-      <div class="chips" id="formats">
-        <button type="button" class="chip on" data-fmt="svg">SVG</button>
-        <button type="button" class="chip" data-fmt="pdf">PDF</button>
-        <button type="button" class="chip" data-fmt="eps">EPS</button>
-        <button type="button" class="chip" data-fmt="dxf">DXF</button>
-        <button type="button" class="chip" data-fmt="webp">WebP</button>
+      <span class="glabel" id="formatsLabel">Output formats</span>
+      <div class="chips" id="formats" role="group" aria-labelledby="formatsLabel">
+        <button type="button" class="chip on" data-fmt="svg" aria-pressed="true">SVG</button>
+        <button type="button" class="chip" data-fmt="pdf" aria-pressed="false">PDF</button>
+        <button type="button" class="chip" data-fmt="eps" aria-pressed="false">EPS</button>
+        <button type="button" class="chip" data-fmt="dxf" aria-pressed="false">DXF</button>
+        <button type="button" class="chip" data-fmt="webp" aria-pressed="false">WebP</button>
       </div>
     </div>
 
@@ -40,10 +44,10 @@
           <option value="ultra">Super fine</option>
         </select>
       </label>
-      <div class="opt"><span class="glabel">Color</span>
-        <div class="seg" id="color">
-          <button type="button" class="on" data-c="mono">Mono</button>
-          <button type="button" data-c="posterized">Color</button>
+      <div class="opt"><span class="glabel" id="colorLabel">Color</span>
+        <div class="seg" id="color" role="group" aria-labelledby="colorLabel">
+          <button type="button" class="on" data-c="mono" aria-pressed="true">Mono</button>
+          <button type="button" data-c="posterized" aria-pressed="false">Color</button>
         </div>
       </div>
       <label class="opt check" id="losslessRow" hidden>
@@ -81,9 +85,24 @@
     border-color: var(--color-brand-500);
     background: var(--color-brand-soft);
   }
-  .drop-empty { color: var(--color-ink-subtle); display: grid; justify-items: center; gap: var(--space-2); }
+  /* Keyboard focus on the (visually hidden) file input lands here. */
+  .drop:focus-within {
+    border-color: var(--color-brand-500);
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+  /* Visually hidden but focusable and in the tab order (vs. display:none). */
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0);
+    white-space: nowrap; border: 0;
+  }
+  .drop-empty { color: var(--color-ink-muted); display: grid; justify-items: center; gap: var(--space-2); }
   .drop-title { color: var(--color-ink-muted); font-weight: var(--font-weight-medium); margin: 0; }
-  .drop-hint { font-size: var(--font-size-xs); margin: 0; }
+  /* ink-muted (not ink-subtle) so the hint meets WCAG AA on the sunken bg. */
+  .drop-hint { font-size: var(--font-size-xs); margin: 0; color: var(--color-ink-muted); }
   .queue { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); text-align: left; }
   .qrow { display: flex; align-items: center; gap: var(--space-3); }
   .qrow img { width: 34px; height: 34px; border-radius: var(--radius-sm); object-fit: cover; background: var(--color-surface-base); }
@@ -273,6 +292,7 @@
       const f = b.dataset.fmt!;
       formats.has(f) ? formats.delete(f) : formats.add(f);
       b.classList.toggle("on", formats.has(f));
+      b.setAttribute("aria-pressed", String(formats.has(f)));
       losslessRow.hidden = !formats.has("webp");
       convertBtn.disabled = !engineReady || queue.length === 0 || formats.size === 0 || busy;
     }));
@@ -281,7 +301,10 @@
   document.querySelectorAll<HTMLButtonElement>("#color button").forEach((b) =>
     b.addEventListener("click", (e) => {
       e.preventDefault(); colorMode = b.dataset.c!;
-      document.querySelectorAll("#color button").forEach((x) => x.classList.toggle("on", x === b));
+      document.querySelectorAll<HTMLButtonElement>("#color button").forEach((x) => {
+        x.classList.toggle("on", x === b);
+        x.setAttribute("aria-pressed", String(x === b));
+      });
     }));
 
   clearBtn.addEventListener("click", (e) => {
