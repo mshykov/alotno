@@ -6,8 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 
-import 'design/tokens.dart';
-import 'src/rust/api/simple.dart';
+import 'package:alotno/design/tokens.dart';
+import 'package:alotno/src/rust/api/simple.dart';
 
 const _allFormats = ['svg', 'pdf', 'eps', 'dxf', 'webp'];
 
