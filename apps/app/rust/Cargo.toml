@@ -2,6 +2,10 @@
 name = "rust_lib_alotno"
 version = "0.1.0"
 edition = "2021"
+# Excluded from the root workspace (cargokit builds it standalone), so it doesn't
+# inherit workspace.package — declare the license explicitly for consistency.
+license = "AGPL-3.0-or-later"
+publish = false
 
 [lib]
 crate-type = ["cdylib", "staticlib"]

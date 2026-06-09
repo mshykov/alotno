@@ -28,6 +28,29 @@ function flatten(obj, prefix = "", out = {}) {
 }
 
 const flat = flatten(tokens);
+
+// ---- validate: fail loudly on malformed input, never emit broken output ----
+const HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+function validate(flatTokens, label) {
+  for (const [k, v] of Object.entries(flatTokens)) {
+    if (typeof v === "number") continue;
+    if (typeof v !== "string") {
+      throw new Error(`tokens.json (${label}): "${k}" must be a string or number, got ${typeof v}`);
+    }
+    if (v.startsWith("#") && !HEX.test(v)) {
+      throw new Error(`tokens.json (${label}): "${k}" is not a 3/6/8-digit hex color: ${v}`);
+    }
+    // Reject characters that would break out of a CSS value / SVG-ish markup.
+    if (/[;{}<>]|[\r\n]/.test(v)) {
+      throw new Error(`tokens.json (${label}): "${k}" contains an unsafe character: ${JSON.stringify(v)}`);
+    }
+  }
+}
+for (const req of ["color", "font", "space", "radius"]) {
+  if (!tokens[req]) throw new Error(`tokens.json: missing required top-level key "${req}"`);
+}
+validate(flat, "light");
+
 const kebab = (s) => s.replace(/\./g, "-").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 const isPx = (path) => /^(font\.size|space|radius)\./.test(path) && typeof flat[path] === "number";
 
@@ -73,11 +96,21 @@ const dartName = (k) =>
     .split(/[.\-]/)
     .map((p, i) => (i === 0 ? p : p[0].toUpperCase() + p.slice(1)))
     .join("");
+// #rgb / #rrggbb / #rrggbbaa → Dart Color(0xAARRGGBB). Handles all valid hex
+// lengths (validated above), not just 6-digit.
+function dartColor(hex) {
+  let h = hex.slice(1);
+  if (h.length === 3) h = [...h].map((c) => c + c).join(""); // #rgb → rrggbb
+  if (h.length === 6) return `Color(0xFF${h.toUpperCase()})`;
+  // #rrggbbaa → 0xAARRGGBB
+  const rgb = h.slice(0, 6);
+  const a = h.slice(6, 8);
+  return `Color(0x${(a + rgb).toUpperCase()})`;
+}
 const dartLine = ([k, v]) => {
   const name = dartName(k);
   if (typeof v === "number") return `  static const ${name} = ${v}.0;`;
-  if (typeof v === "string" && v.startsWith("#"))
-    return `  static const ${name} = Color(0xFF${v.slice(1).toUpperCase()});`;
+  if (typeof v === "string" && v.startsWith("#")) return `  static const ${name} = ${dartColor(v)};`;
   return `  static const ${name} = ${JSON.stringify(v)};`;
 };
 
@@ -102,6 +135,7 @@ let dart =
 // by brightness: `isDark ? TokensDark.colorSurfaceBase : Tokens.colorSurfaceBase`.
 if (tokens.$dark) {
   const darkColors = flatten({ color: deepMerge(tokens.color, tokens.$dark.color) });
+  validate(darkColors, "dark");
   const darkLines = Object.entries(darkColors)
     .filter(([, v]) => typeof v === "string" && v.startsWith("#"))
     .map(dartLine);
