@@ -6,7 +6,9 @@ on:
   pull_request:
 
 jobs:
-  core:
+  # ---- Rust: the core engine + both bindings (format, lint, test) ----
+  rust:
+    # Name kept exactly as the branch-protection required-check context on `main`.
     name: Rust core (test + wasm)
     runs-on: ubuntu-latest
     steps:
@@ -14,22 +16,57 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: Test core
-        run: cargo test -p alotno-core
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - name: Build WASM bundle
-        run: wasm-pack build bindings/wasm --target web --out-dir pkg --release
-      - name: Upload WASM bundle
-        uses: actions/upload-artifact@v4
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy (deny warnings)
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Test (incl. parser fuzz/proptests)
+        run: cargo test --workspace --all-features
+      - name: Native FFI crate (apps/app/rust) builds + tests
+        # Separate Cargo workspace (cargokit builds it per target). Not linted
+        # with -D warnings here because it includes frb-generated code.
+        run: cargo test --manifest-path apps/app/rust/Cargo.toml
+
+  # ---- WASM bundle: build once, share with the web job ----
+  wasm:
+    name: WASM bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-wasm
+      - uses: actions/upload-artifact@v4
         with:
           name: wasm-pkg
           path: bindings/wasm/pkg
 
+  # ---- Flutter app: static analysis (the shipped desktop product) ----
+  flutter:
+    name: Flutter (analyze)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.1
+          channel: stable
+          cache: true
+      - name: Pub get
+        run: flutter pub get
+        working-directory: apps/app
+      - name: Analyze
+        run: flutter analyze
+        working-directory: apps/app
+      # `flutter test` is not gated yet: the only widget test is skipped because
+      # macos_ui leaves a pending timer at teardown in headless runs. A proper
+      # test harness is a tracked follow-up.
+
+  # ---- Web: tokens + type-check + build (consumes the WASM bundle) ----
   web:
+    # Name kept exactly as the branch-protection required-check context on `main`.
     name: Web (tokens + Astro build)
-    needs: core
+    needs: [wasm]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,5 +83,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generate design tokens
         run: pnpm --filter @alotno/design build
+      - name: Verify committed Flutter tokens are in sync with the generator
+        run: |
+          if ! diff -q design/dist/tokens.dart apps/app/lib/design/tokens.dart >/dev/null; then
+            echo "::error::apps/app/lib/design/tokens.dart is out of sync with design/tokens.json."
+            echo "Run 'pnpm tokens' and copy design/dist/tokens.dart into apps/app/lib/design/."
+            diff design/dist/tokens.dart apps/app/lib/design/tokens.dart || true
+            exit 1
+          fi
+      - name: Type-check (astro check)
+        run: pnpm --filter @alotno/web check
       - name: Build site
         run: pnpm --filter @alotno/web build

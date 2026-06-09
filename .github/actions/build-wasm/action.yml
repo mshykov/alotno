@@ -1,0 +1,20 @@
+name: Build WASM core
+description: >
+  Set up Rust + wasm-pack and build the Alotno WASM bundle into
+  bindings/wasm/pkg. Assumes the repo is already checked out. Shared by the CI
+  and deploy workflows so they build the WASM identically (no drift).
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+    - uses: Swatinem/rust-cache@v2
+    # Prebuilt wasm-pack binary — replaces the previous `curl | sh` install
+    # (no piping a remote script into a shell).
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: wasm-pack
+    - shell: bash
+      run: wasm-pack build bindings/wasm --target web --out-dir pkg --release

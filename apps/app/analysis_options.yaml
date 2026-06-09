@@ -9,6 +9,13 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # Build artifacts (incl. cargokit's generated build_tool) — never our code.
+    - build/**
+    # frb-generated bridge code is machine-written; don't lint it.
+    - lib/src/rust/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
