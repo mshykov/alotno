@@ -1,32 +1,44 @@
-// Smoke test for the real Alotno converter screen.
+// Widget tests for the extracted converter parts.
 //
-// We pump `ConverterScreen` directly (not the full `AlotnoApp`, which initializes
-// the window/tray managers and the Rust engine — none of which exist in a
-// headless test). The screen itself builds and renders its initial state fine.
-//
-// SKIPPED for now: `macos_ui` leaves an internal periodic Timer running, which
-// trips the test framework's pending-timer invariant at teardown. Getting this
-// green needs a small harness (fake_async / a macos_ui test pump helper) — see
-// the testing follow-up. The test is kept (not deleted) so it compiles under
-// `flutter analyze` and documents the intended coverage.
+// We test the leaf widgets (`widgets/converter_parts.dart`) rather than the full
+// `ConverterScreen`: the screen wraps `MacosWindow`, whose macos_window_utils
+// visual-effect layer needs a real native window and crashes headlessly. The
+// extracted parts only need a `MacosApp` (for `MacosTheme`), so they render and
+// interact cleanly in CI — a concrete payoff of the widget extraction.
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:macos_ui/macos_ui.dart';
 
-import 'package:alotno/converter_screen.dart';
+import 'package:alotno/widgets/converter_parts.dart';
 
 void main() {
-  testWidgets(
-    'ConverterScreen renders its initial state',
-    (tester) async {
-      await tester.pumpWidget(
-        const MacosApp(
-          debugShowCheckedModeBanner: false,
-          home: ConverterScreen(),
+  testWidgets('SectionLabel renders its text uppercased', (tester) async {
+    await tester.pumpWidget(
+      const MacosApp(home: Center(child: SectionLabel('Output formats'))),
+    );
+    expect(find.text('OUTPUT FORMATS'), findsOneWidget);
+  });
+
+  testWidgets('FormatChips shows every format and reports toggles', (tester) async {
+    final toggled = <String>[];
+    await tester.pumpWidget(
+      MacosApp(
+        home: Center(
+          child: FormatChips(
+            selected: const {'svg'},
+            busy: false,
+            onToggle: toggled.add,
+          ),
         ),
-      );
-      expect(find.text('Drop PNGs to begin.'), findsOneWidget);
-    },
-    skip: true, // macos_ui pending-timer at teardown; needs a test harness.
-  );
+      ),
+    );
+
+    for (final label in ['SVG', 'PDF', 'EPS', 'DXF', 'WEBP']) {
+      expect(find.text(label), findsOneWidget);
+    }
+
+    await tester.tap(find.text('PDF'));
+    expect(toggled, ['pdf']);
+  });
 }
