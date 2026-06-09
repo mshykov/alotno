@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path/path.dart' as p;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:alotno/design/tokens.dart';
 import 'package:alotno/src/rust/api/simple.dart';
@@ -42,12 +43,6 @@ class _ConverterScreenState extends State<ConverterScreen> {
 
   // ---- data helpers ----
 
-  ({int w, int h})? _pngSize(Uint8List b) {
-    if (b.length < 24) return null;
-    int be(int o) => (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
-    return (w: be(16), h: be(20));
-  }
-
   String _human(int bytes) {
     if (bytes >= 1024 * 1024) return '${(bytes / 1048576).toStringAsFixed(1)} MB';
     if (bytes >= 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
@@ -62,8 +57,15 @@ class _ConverterScreenState extends State<ConverterScreen> {
       if (_queue.any((i) => i.path == path)) continue;
       try {
         final bytes = await File(path).readAsBytes();
-        final dim = _pngSize(bytes);
-        _queue.add(_Item(path, p.basename(path), bytes, dim?.w ?? 0, dim?.h ?? 0));
+        // Dimensions come from the core (no in-Dart PNG parsing); fall back to
+        // 0×0 if the header can't be read.
+        var w = 0, h = 0;
+        try {
+          final d = await imageDimensions(pngBytes: bytes);
+          w = d.width;
+          h = d.height;
+        } catch (_) {}
+        _queue.add(_Item(path, p.basename(path), bytes, w, h));
         added++;
       } catch (_) {
         failed++; // unreadable / permission denied — report rather than swallow
@@ -194,9 +196,14 @@ class _ConverterScreenState extends State<ConverterScreen> {
   Future<void> _reveal() async {
     final dir = _outDir;
     if (dir == null) return;
+    // url_launcher opens the folder via NSWorkspace — sandbox-legal for a
+    // user-selected directory. (Spawning `open` is blocked by the App Sandbox.)
     try {
-      await Process.run('open', [dir]);
-    } catch (_) {}
+      final ok = await launchUrl(Uri.directory(dir));
+      if (!ok && mounted) setState(() => _status = 'Could not open the output folder.');
+    } catch (e) {
+      if (mounted) setState(() => _status = 'Could not open the folder: $e');
+    }
   }
 
   // ---- UI ----

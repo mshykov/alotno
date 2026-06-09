@@ -69,6 +69,12 @@ pub fn png_to_dxf(png_bytes: &[u8], options: &SvgOptions) -> Result<String, Conv
 // Raster outputs
 // ---------------------------------------------------------------------------
 
+/// PNG bytes → `(width, height)` in pixels, without decoding the image. Lets the
+/// platform shells label/queue images without re-implementing PNG parsing.
+pub fn png_dimensions(png_bytes: &[u8]) -> Result<(u32, u32), ConvertError> {
+    decode::dimensions(png_bytes)
+}
+
 /// PNG bytes → WebP bytes. Pure-Rust by default (works in WASM); native builds
 /// with the `libwebp` feature get higher-quality lossy encoding.
 pub fn png_to_webp(png_bytes: &[u8], options: &WebpOptions) -> Result<Vec<u8>, ConvertError> {

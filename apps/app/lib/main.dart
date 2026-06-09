@@ -20,6 +20,9 @@ Future<void> main() async {
     },
   );
   // Closing the window hides it; the app stays alive in the menu bar.
+  // Hybrid by design: we intentionally do NOT set LSUIElement, so Alotno keeps a
+  // Dock icon and behaves as a normal windowed app that also has a menu-bar item
+  // (rather than a pure background/agent app). See PR #26.
   await windowManager.setPreventClose(true);
 
   // Menu-bar (status) item — template icon adapts to light/dark menu bars.

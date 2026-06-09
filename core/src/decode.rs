@@ -28,6 +28,15 @@ pub struct RgbaImage {
     pub pixels: Vec<u8>,
 }
 
+/// Read a PNG's pixel dimensions without decoding the pixel data. Used by the
+/// shells for queue thumbnails/labels, so dimension parsing lives in the core
+/// (not re-implemented per platform).
+pub(crate) fn dimensions(png_bytes: &[u8]) -> Result<(u32, u32), ConvertError> {
+    limited_reader(png_bytes)?
+        .into_dimensions()
+        .map_err(|e| ConvertError::Decode(e.to_string()))
+}
+
 /// Whether the given dimensions exceed the engine's safety caps.
 fn exceeds_limits(w: u32, h: u32) -> bool {
     w > MAX_SIDE || h > MAX_SIDE || (w as u64) * (h as u64) > MAX_PIXELS
