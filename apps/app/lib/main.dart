@@ -1,9 +1,13 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/widgets.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:path/path.dart' as p;
 import 'package:tray_manager/tray_manager.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:alotno/conversion.dart';
 import 'package:alotno/converter_screen.dart';
 import 'package:alotno/src/rust/frb_generated.dart';
 
@@ -31,6 +35,7 @@ Future<void> main() async {
   await trayManager.setContextMenu(
     Menu(items: [
       MenuItem(key: 'show', label: 'Open Alotno'),
+      MenuItem(key: 'convert', label: 'Convert PNG to SVG…'),
       MenuItem.separator(),
       MenuItem(key: 'quit', label: 'Quit Alotno'),
     ]),
@@ -78,9 +83,33 @@ class _AlotnoAppState extends State<AlotnoApp> with TrayListener, WindowListener
   void onTrayMenuItemClick(MenuItem menuItem) async {
     if (menuItem.key == 'show') {
       await _open();
+    } else if (menuItem.key == 'convert') {
+      await _convertQuick();
     } else if (menuItem.key == 'quit') {
       await windowManager.setPreventClose(false);
       await windowManager.destroy();
+    }
+  }
+
+  /// Menu-bar one-shot: pick a PNG, convert it to SVG (saved next to the
+  /// source), and reveal the folder in Finder — all without opening the main
+  /// window. Reuses the shared conversion service.
+  Future<void> _convertQuick() async {
+    try {
+      final res = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['png'],
+        allowMultiple: false,
+      );
+      final path = res?.files.first.path;
+      if (path == null) return;
+      await trayManager.setToolTip('Alotno — converting…');
+      final out = await convertPngToSvgFile(path);
+      await trayManager.setToolTip('Alotno — saved ${p.basename(out.path)}');
+      // Reveal the output folder (sandbox-legal via NSWorkspace).
+      await launchUrl(Uri.directory(p.dirname(out.path)));
+    } catch (_) {
+      await trayManager.setToolTip('Alotno — conversion failed');
     }
   }
 
