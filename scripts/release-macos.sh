@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 #
 # Build → sign (Developer ID + hardened runtime) → DMG → notarize → staple.
-# Produces a shareable, Gatekeeper-approved Alotno-<version>.dmg.
+# Produces a shareable, Gatekeeper-approved Alotno-macOS.dmg (stable filename, so
+# a published download link never changes; the version lives inside the app).
+# The DMG uses Finder's default window layout; the centered icon is the app's
+# .icns asset (centroid-centered), not a custom DMG window arrangement.
 #
 # ONE-TIME PREREQUISITES (see docs/releasing-macos.md):
 #   1. A "Developer ID Application" certificate for the PERSONAL team 64HRGLZCS4
@@ -47,8 +50,22 @@ DMG="$ROOT/Alotno-macOS.dmg"
 APP="$APP_DIR/build/macos/Build/Products/Release/Alotno.app"
 
 # --- 1. build --------------------------------------------------------------------
-echo "▸ Building release…"
+echo "▸ Building release (Alotno $VERSION)…"
 ( cd "$APP_DIR" && flutter build macos --release )
+
+# --- 1b. assert the binary is universal (arm64 + x86_64) -------------------------
+# Flutter release defaults to a universal macOS binary, but nothing else enforces
+# it — so verify rather than trust, lest a future toolchain default ship a
+# single-arch DMG that won't run on half of Macs.
+BIN="$APP/Contents/MacOS/Alotno"
+ARCHS="$(lipo -archs "$BIN" 2>/dev/null || true)"
+for arch in arm64 x86_64; do
+  if [[ " $ARCHS " != *" $arch "* ]]; then
+    echo "❌ Release binary is not universal — missing $arch (got: ${ARCHS:-none})."
+    exit 1
+  fi
+done
+echo "✓ Universal binary ($ARCHS)"
 
 # --- 2. sign (inside-out: frameworks first, then the app) ------------------------
 echo "▸ Signing nested frameworks…"
@@ -60,7 +77,9 @@ find "$APP/Contents/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.d
 echo "▸ Signing the app…"
 codesign --force --options runtime --timestamp \
   --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP"
-codesign --verify --deep --strict --verbose=2 "$APP"
+# `--deep` is deprecated (Apple recommends signing/verifying components
+# explicitly, which we already do above). Verify the app strictly without it.
+codesign --verify --strict --verbose=2 "$APP"
 
 # --- 3. DMG (with /Applications shortcut) ----------------------------------------
 echo "▸ Building DMG…"

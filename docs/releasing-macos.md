@@ -1,7 +1,9 @@
 # Releasing the macOS app (signed + notarized DMG)
 
-Produces a shareable `Alotno-<version>.dmg` that runs on any Mac without Gatekeeper
+Produces a shareable `Alotno-macOS.dmg` that runs on any Mac without Gatekeeper
 warnings. Distributed **outside** the App Store (Developer ID + notarization).
+The filename is stable (the version lives inside the app), so a published
+download link never changes.
 
 Everything is automated in [`scripts/release-macos.sh`](../scripts/release-macos.sh).
 You only do the two prerequisites below **once**.
@@ -46,7 +48,8 @@ scripts/release-macos.sh
 It builds the release app, signs the frameworks + app (Developer ID, hardened
 runtime, secure timestamp, with the sandbox entitlements), packages a DMG with an
 `/Applications` shortcut, submits to Apple's notary service, staples the ticket,
-and verifies. Output: `Alotno-<version>.dmg` at the repo root.
+and verifies. Output: `Alotno-macOS.dmg` at the repo root. The script also
+asserts the built binary is universal (arm64 + x86_64) before signing.
 
 ## What the script does (so you can audit it)
 1. Auto-detects the Developer ID identity for team `64HRGLZCS4`.
