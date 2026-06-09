@@ -42,9 +42,9 @@ jobs:
           name: wasm-pkg
           path: bindings/wasm/pkg
 
-  # ---- Flutter app: static analysis (the shipped desktop product) ----
+  # ---- Flutter app: static analysis + tests (the shipped desktop product) ----
   flutter:
-    name: Flutter (analyze)
+    name: Flutter (analyze + test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -59,9 +59,12 @@ jobs:
       - name: Analyze
         run: flutter analyze
         working-directory: apps/app
-      # `flutter test` is not gated yet: the only widget test is skipped because
-      # macos_ui leaves a pending timer at teardown in headless runs. A proper
-      # test harness is a tracked follow-up.
+      - name: Test
+        # Unit tests for the conversion service + widget tests for the extracted
+        # parts. The full ConverterScreen isn't headless-testable (MacosWindow
+        # needs a native window), so we test the leaf widgets instead.
+        run: flutter test
+        working-directory: apps/app
 
   # ---- Web: tokens + type-check + build (consumes the WASM bundle) ----
   web:
