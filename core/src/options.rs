@@ -199,6 +199,91 @@ pub struct SvgOptions {
     pub clip_overflow: bool,
 }
 
+/// Plain, string-keyed mirror of [`SvgOptions`] shared by the language bindings.
+///
+/// This centralizes the three things that previously drifted between the WASM
+/// and native bindings: the string→enum parsing, the default values, and the
+/// stroke-color convention (empty string = keep each shape's traced color).
+/// Bindings build an `OptionsDto` from their wire format and call `.into()`.
+///
+/// With the `serde` feature (enabled by the WASM binding) it deserializes
+/// directly from a camelCase JS object; every field is optional.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase", default))]
+pub struct OptionsDto {
+    pub preset: String,
+    pub color_mode: String,
+    pub curve_type: String,
+    pub stacking: String,
+    pub posterize_steps: u8,
+    pub threshold: u8,
+    pub version: String,
+    pub draw_style: String,
+    pub group_by: String,
+    /// Empty string keeps each shape's traced color (no stroke override).
+    pub stroke_color: String,
+    pub stroke_width: f32,
+    pub non_scaling_stroke: bool,
+    pub fixed_size: bool,
+    pub adobe_compat: bool,
+    pub clip_overflow: bool,
+}
+
+impl Default for OptionsDto {
+    fn default() -> Self {
+        OptionsDto {
+            preset: "high".into(),
+            color_mode: "mono".into(),
+            curve_type: "curves".into(),
+            stacking: "cutouts".into(),
+            posterize_steps: 4,
+            threshold: 128,
+            version: "1.1".into(),
+            draw_style: "fill".into(),
+            group_by: "none".into(),
+            stroke_color: "#000000".into(),
+            stroke_width: 1.0,
+            non_scaling_stroke: false,
+            fixed_size: false,
+            adobe_compat: false,
+            clip_overflow: false,
+        }
+    }
+}
+
+impl From<OptionsDto> for SvgOptions {
+    fn from(o: OptionsDto) -> Self {
+        let stroke_color = {
+            let c = o.stroke_color.trim();
+            if c.is_empty() {
+                None
+            } else {
+                Some(c.to_string())
+            }
+        };
+        SvgOptions {
+            preset: Preset::parse(&o.preset),
+            color_mode: ColorMode::parse(&o.color_mode),
+            curve_type: CurveType::parse(&o.curve_type),
+            stacking: Stacking::parse(&o.stacking),
+            posterize_steps: o.posterize_steps,
+            threshold: o.threshold,
+            version: SvgVersion::parse(&o.version),
+            draw_style: DrawStyle::parse(&o.draw_style),
+            group_by: GroupBy::parse(&o.group_by),
+            stroke: StrokeStyle {
+                color: stroke_color,
+                width: o.stroke_width,
+                non_scaling: o.non_scaling_stroke,
+            },
+            fixed_size: o.fixed_size,
+            adobe_compat: o.adobe_compat,
+            clip_overflow: o.clip_overflow,
+        }
+    }
+}
+
 /// Options for WebP encoding.
 #[derive(Debug, Clone)]
 pub struct WebpOptions {

@@ -21,8 +21,8 @@ mod vector;
 
 pub use decode::RgbaImage;
 pub use options::{
-    ColorMode, ConvertError, CurveType, DrawStyle, GroupBy, Preset, Stacking, StrokeStyle,
-    SvgOptions, SvgVersion, WebpOptions,
+    ColorMode, ConvertError, CurveType, DrawStyle, GroupBy, OptionsDto, Preset, Stacking,
+    StrokeStyle, SvgOptions, SvgVersion, WebpOptions,
 };
 
 // ---------------------------------------------------------------------------

@@ -27,6 +27,7 @@ dependencies = [
  "image 0.25.10",
  "image-webp 0.2.4",
  "proptest",
+ "serde",
  "svg2pdf",
  "visioncortex",
  "vtracer",
@@ -39,7 +40,6 @@ version = "0.1.0"
 dependencies = [
  "alotno-core",
  "console_error_panic_hook",
- "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",
 ]

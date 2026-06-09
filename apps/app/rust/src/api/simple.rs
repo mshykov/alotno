@@ -6,8 +6,8 @@
 //! inside the Flutter project so cargokit can build it for each target.)
 
 use alotno_core::{
-    png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp, ColorMode, CurveType, DrawStyle,
-    GroupBy, Preset, Stacking, StrokeStyle, SvgOptions, SvgVersion, WebpOptions,
+    png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp, OptionsDto, SvgOptions,
+    WebpOptions,
 };
 
 #[flutter_rust_bridge::frb(init)]
@@ -63,27 +63,33 @@ impl Default for TraceOptions {
     }
 }
 
-impl From<TraceOptions> for SvgOptions {
+/// Map the bridge struct onto the shared core DTO (a plain field copy — all
+/// parsing/default/stroke logic lives in `alotno_core::OptionsDto`).
+impl From<TraceOptions> for OptionsDto {
     fn from(o: TraceOptions) -> Self {
-        SvgOptions {
-            preset: Preset::parse(&o.preset),
-            color_mode: ColorMode::parse(&o.color_mode),
-            curve_type: CurveType::parse(&o.curve_type),
-            stacking: Stacking::parse(&o.stacking),
+        OptionsDto {
+            preset: o.preset,
+            color_mode: o.color_mode,
+            curve_type: o.curve_type,
+            stacking: o.stacking,
             posterize_steps: o.posterize_steps,
             threshold: o.threshold,
-            version: SvgVersion::parse(&o.version),
-            draw_style: DrawStyle::parse(&o.draw_style),
-            group_by: GroupBy::parse(&o.group_by),
-            stroke: StrokeStyle {
-                color: if o.stroke_color.is_empty() { None } else { Some(o.stroke_color) },
-                width: o.stroke_width,
-                non_scaling: o.non_scaling_stroke,
-            },
+            version: o.version,
+            draw_style: o.draw_style,
+            group_by: o.group_by,
+            stroke_color: o.stroke_color,
+            stroke_width: o.stroke_width,
+            non_scaling_stroke: o.non_scaling_stroke,
             fixed_size: o.fixed_size,
             adobe_compat: o.adobe_compat,
             clip_overflow: o.clip_overflow,
         }
+    }
+}
+
+impl From<TraceOptions> for SvgOptions {
+    fn from(o: TraceOptions) -> Self {
+        OptionsDto::from(o).into()
     }
 }
 
@@ -113,6 +119,13 @@ pub fn convert_png_to_webp(
     lossless: bool,
     mono: bool,
 ) -> Result<Vec<u8>, String> {
-    png_to_webp(&png_bytes, &WebpOptions { quality, lossless, grayscale: mono })
-        .map_err(|e| e.to_string())
+    png_to_webp(
+        &png_bytes,
+        &WebpOptions {
+            quality,
+            lossless,
+            grayscale: mono,
+        },
+    )
+    .map_err(|e| e.to_string())
 }
