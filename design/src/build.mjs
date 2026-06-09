@@ -68,20 +68,45 @@ const cleanTs =
   `export const tokens = ${JSON.stringify(stripMeta(tokens), null, 2)} as const;\n`;
 
 // ---- Dart ----
-const dartLines = Object.entries(flat).map(([k, v]) => {
-  const name = k
+const dartName = (k) =>
+  k
     .split(/[.\-]/)
     .map((p, i) => (i === 0 ? p : p[0].toUpperCase() + p.slice(1)))
     .join("");
+const dartLine = ([k, v]) => {
+  const name = dartName(k);
   if (typeof v === "number") return `  static const ${name} = ${v}.0;`;
   if (typeof v === "string" && v.startsWith("#"))
     return `  static const ${name} = Color(0xFF${v.slice(1).toUpperCase()});`;
   return `  static const ${name} = ${JSON.stringify(v)};`;
-});
-const dart =
+};
+
+// Deep-merge the dark color overrides over the light colors so TokensDark has
+// every color name (dark where overridden, light otherwise).
+function deepMerge(base, over) {
+  const out = { ...base };
+  for (const [k, v] of Object.entries(over || {})) {
+    if (k.startsWith("$")) continue;
+    out[k] = v && typeof v === "object" && !Array.isArray(v) ? deepMerge(base?.[k] ?? {}, v) : v;
+  }
+  return out;
+}
+
+const dartLines = Object.entries(flat).map(dartLine);
+let dart =
   `// GENERATED from design/tokens.json — do not edit by hand.\n` +
   `import 'package:flutter/material.dart';\n\n` +
   `class Tokens {\n${dartLines.join("\n")}\n}\n`;
+
+// Dark-mode color tokens (only colors change in dark). Consumers pick the class
+// by brightness: `isDark ? TokensDark.colorSurfaceBase : Tokens.colorSurfaceBase`.
+if (tokens.$dark) {
+  const darkColors = flatten({ color: deepMerge(tokens.color, tokens.$dark.color) });
+  const darkLines = Object.entries(darkColors)
+    .filter(([, v]) => typeof v === "string" && v.startsWith("#"))
+    .map(dartLine);
+  dart += `\nclass TokensDark {\n${darkLines.join("\n")}\n}\n`;
+}
 
 await mkdir(join(root, "dist"), { recursive: true });
 await Promise.all([

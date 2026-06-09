@@ -51,3 +51,31 @@ class Tokens {
   static const radiusLg = 14.0;
   static const radiusFull = 999.0;
 }
+
+class TokensDark {
+  static const colorBrand500 = Color(0xFF818CF8);
+  static const colorBrand600 = Color(0xFF6366F1);
+  static const colorBrand700 = Color(0xFF4338CA);
+  static const colorBrandSoft = Color(0xFF1E1B4B);
+  static const colorNeutral0 = Color(0xFF0B1120);
+  static const colorNeutral50 = Color(0xFF0F172A);
+  static const colorNeutral100 = Color(0xFF111827);
+  static const colorNeutral200 = Color(0xFF1E293B);
+  static const colorNeutral400 = Color(0xFF64748B);
+  static const colorNeutral600 = Color(0xFF94A3B8);
+  static const colorNeutral900 = Color(0xFFE2E8F0);
+  static const colorSurfaceBase = Color(0xFF0B1120);
+  static const colorSurfaceSunken = Color(0xFF0F172A);
+  static const colorSurfaceElevated = Color(0xFF111827);
+  static const colorInkBase = Color(0xFFE2E8F0);
+  static const colorInkMuted = Color(0xFF94A3B8);
+  static const colorInkSubtle = Color(0xFF64748B);
+  static const colorInkFaint = Color(0xFF334155);
+  static const colorOutlineBase = Color(0xFF1E293B);
+  static const colorOutlineStrong = Color(0xFF334155);
+  static const colorStateSuccess = Color(0xFF16A34A);
+  static const colorStateSuccessSoft = Color(0xFFDCFCE7);
+  static const colorStateError = Color(0xFFDC2626);
+  static const colorStateErrorSoft = Color(0xFFFEE2E2);
+  static const colorStateWarning = Color(0xFFD97706);
+}

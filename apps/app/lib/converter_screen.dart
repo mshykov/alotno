@@ -205,10 +205,10 @@ class _ConverterScreenState extends State<ConverterScreen> {
   Widget build(BuildContext context) {
     final t = MacosTheme.of(context);
     final isDark = t.brightness == Brightness.dark;
-    final accent = isDark ? const Color(0xFF818CF8) : Tokens.colorBrand500;
-    final sunken = isDark ? const Color(0xFF0F172A) : Tokens.colorSurfaceSunken;
-    final outline = isDark ? const Color(0xFF334155) : Tokens.colorOutlineStrong;
-    final muted = isDark ? const Color(0xFF94A3B8) : Tokens.colorInkMuted;
+    final accent = isDark ? TokensDark.colorBrand500 : Tokens.colorBrand500;
+    final sunken = isDark ? TokensDark.colorSurfaceSunken : Tokens.colorSurfaceSunken;
+    final outline = isDark ? TokensDark.colorOutlineStrong : Tokens.colorOutlineStrong;
+    final muted = isDark ? TokensDark.colorInkMuted : Tokens.colorInkMuted;
     final body = t.typography.body;
 
     return MacosWindow(
@@ -332,7 +332,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
           const SizedBox(width: 8),
           Text(
             '${i.w}×${i.h} · ${_human(i.size)}',
-            style: TextStyle(fontFamily: 'Menlo', fontSize: 12, color: muted),
+            // 'Menlo' is a system mono: Tokens.fontFamilyMono is a CSS font
+            // stack (for the web), not a single family Flutter can use.
+            style: TextStyle(fontFamily: 'Menlo', fontSize: Tokens.fontSizeXs, color: muted),
           ),
           const SizedBox(width: 4),
           MacosIconButton(
