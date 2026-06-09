@@ -26,6 +26,25 @@ The Flutter app, reusing the same core via FFI.
 - [ ] Enable iOS + Android targets on the *same* Flutter project.
 - [ ] Platform file-picker / share-sheet integration; the engine is unchanged.
 
+## Deferred / known limitations
+
+### Lossy WebP on the web (libwebp → WASM)
+Web WebP export is **lossless-only**; native (the Flutter app) gets libwebp-grade
+lossy. This is surfaced honestly — `core::webp_lossy_supported()` returns `false`
+in the WASM build, and the web UI locks the "Lossless" toggle on accordingly (see
+`core/src/raster/webp.rs`).
+
+Closing the gap needs one of:
+- an **Emscripten-compiled libwebp** module (Squoosh-style) loaded by the convert
+  Web Worker — the C library can't compile to `wasm32-unknown-unknown` directly
+  (no wasm libc; `cc`/clang have no wasm target), so it must be a separate,
+  pre-built `.wasm` artifact with its own JS glue; or
+- a **pure-Rust lossy (VP8) WebP encoder** once one exists — `image-webp` is
+  lossless-only today and there's no maintained pure-Rust lossy encoder.
+
+Deferred until web lossy parity is a real need; lossless WebP (which the browser
+`canvas.toBlob` cannot produce) already ships on the web.
+
 ## Guardrails
 - New conversion behavior goes in `core/` only — never reimplemented in an app.
 - New visual styling goes in `design/tokens.json` only — never hardcoded.
