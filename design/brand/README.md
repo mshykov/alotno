@@ -10,22 +10,21 @@ tokens.
 | `alotno-logo.pdf` | Vector, for print |
 | `alotno-logo.webp` | 76 KB web-optimized raster |
 | `alotno-logo.png` | 1024px raster (downscaled from a 4.8 MB original; prefer the SVG) |
-| `alotno-icon-1024.png` | Square, full-bleed crop used to generate the macOS app icon |
+| `alotno-icon-1024.png` | Square, full-bleed app-icon master (indigo falcon on lavender), generated from `alotno-logo.svg` |
 
-## macOS app icon
-Generated from `alotno-icon-1024.png` into
-`apps/app/macos/Runner/Assets.xcassets/AppIcon.appiconset/` (all sizes via `sips`).
+## Regenerating all icons
+Every app/site icon is derived from `alotno-logo.svg` by a single script:
 
-> ⚠️ **Interim.** This was square-cropped out of the original *presentation
-> mockup* (the logo came on a white card with a drop shadow). It's clean, but:
-> - the fine crosshatch detail softens below ~32px (icons should read at 16px), and
-> - it's light-on-light, which is flatter in the Dock than the filled-squircle norm.
->
-> For a polished icon, commission a **simplified falcon glyph on a filled
-> squircle** (indigo or white) designed for 16px legibility. Regenerate with:
-> ```sh
-> for s in 16 32 64 128 256 512 1024; do
->   sips -z $s $s design/brand/alotno-icon-1024.png \
->     --out apps/app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_$s.png
-> done
-> ```
+```sh
+scripts/gen-icons.sh
+```
+
+It produces the full-bleed **lavender** falcon tile at every size for macOS, iOS,
+Android, Windows, the web (`apple-touch-icon.png`, `icon.png` for the
+header/hero, `og-image.png`), and the `alotno-icon-1024.png` master.
+
+**Not regenerated (intentionally):**
+- the **favicon** (`apps/web/public/favicon.{svg,ico}`, `favicon-16/32.png`) —
+  kept as the white-bird-on-blue mark.
+- the macOS **menu-bar tray icon** (`apps/app/assets/tray_icon.png`) — a
+  monochrome *template* image that macOS tints per light/dark menu bar.
