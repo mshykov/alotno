@@ -280,6 +280,10 @@ impl Default for SvgOptions {
 /// WASM/FFI callers get a clear message without leaking Rust error types.
 #[derive(Debug, Clone)]
 pub enum ConvertError {
+    /// Input rejected before decoding — malformed, or larger than the engine's
+    /// safety limits (see `decode`). Distinct from `Decode` so callers can tell
+    /// "bad/oversized input" from "decoder failure".
+    InvalidInput(String),
     Decode(String),
     Trace(String),
     Encode(String),
@@ -288,6 +292,7 @@ pub enum ConvertError {
 impl core::fmt::Display for ConvertError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
+            ConvertError::InvalidInput(m) => write!(f, "invalid input: {m}"),
             ConvertError::Decode(m) => write!(f, "failed to decode image: {m}"),
             ConvertError::Trace(m) => write!(f, "failed to trace image: {m}"),
             ConvertError::Encode(m) => write!(f, "failed to encode output: {m}"),
