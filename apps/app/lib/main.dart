@@ -4,8 +4,8 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'converter_screen.dart';
-import 'src/rust/frb_generated.dart';
+import 'package:alotno/converter_screen.dart';
+import 'package:alotno/src/rust/frb_generated.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
