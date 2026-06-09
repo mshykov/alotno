@@ -1,0 +1,24 @@
+{
+  "name": "Alotno — PNG to SVG, PDF, EPS, DXF, WebP",
+  "short_name": "Alotno",
+  "description": "Convert PNG to SVG, PDF, EPS, DXF, and WebP — fast, local, and private.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "minimal-ui",
+  "background_color": "#ffffff",
+  "theme_color": "#6366F1",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
