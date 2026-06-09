@@ -95,7 +95,6 @@ pub(crate) fn to_svg(image: RgbaImage, options: &SvgOptions) -> Result<String, C
         splice_threshold: t.splice_threshold,
         max_iterations: 10,
         path_precision: Some(t.path_precision),
-        ..Config::default()
     };
 
     let svg = vtracer::convert(color_image, config).map_err(ConvertError::Trace)?;
