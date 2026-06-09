@@ -7,13 +7,14 @@ description: >
 runs:
   using: composite
   steps:
-    - uses: dtolnay/rust-toolchain@stable
+    - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
       with:
+        toolchain: stable # required when SHA-pinned (channel can't come from the ref)
         targets: wasm32-unknown-unknown
-    - uses: Swatinem/rust-cache@v2
+    - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
     # Prebuilt wasm-pack binary — replaces the previous `curl | sh` install
     # (no piping a remote script into a shell).
-    - uses: taiki-e/install-action@v2
+    - uses: taiki-e/install-action@0631aa6515c7d545823c67cfae7ef4fc7f490154 # v2
       with:
         tool: wasm-pack
     - shell: bash
