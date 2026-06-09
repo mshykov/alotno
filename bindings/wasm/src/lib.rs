@@ -5,10 +5,18 @@
 //! lossless WebP, which `canvas.toBlob` cannot.
 
 use alotno_core::{
-    png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp, OptionsDto, SvgOptions,
-    WebpOptions,
+    png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp, webp_lossy_supported, OptionsDto,
+    SvgOptions, WebpOptions,
 };
 use wasm_bindgen::prelude::*;
+
+/// Whether this (WASM) build can produce lossy WebP. Always `false` today — the
+/// browser build is pure-Rust and lossless-only — so the UI can disable/relabel
+/// any lossy control. Mirrors the native binding for surface parity.
+#[wasm_bindgen(js_name = webpLossySupported)]
+pub fn webp_lossy_supported_wasm() -> bool {
+    webp_lossy_supported()
+}
 
 /// Deserialize the JS options object into the shared core [`OptionsDto`] (every
 /// field optional, camelCase, unknown keys ignored), then map to `SvgOptions`.

@@ -6,10 +6,15 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`
 
 /// Quick proof the Dart→Rust→alotno-core chain is linked and callable.
 String engineInfo() => RustLib.instance.api.crateApiSimpleEngineInfo();
+
+/// Whether this build can produce lossy WebP. `true` on native (libwebp); the
+/// UI can use it to enable a real quality control.
+bool webpLossySupportedNative() =>
+    RustLib.instance.api.crateApiSimpleWebpLossySupportedNative();
 
 Future<String> tracePngToSvg({
   required List<int> pngBytes,

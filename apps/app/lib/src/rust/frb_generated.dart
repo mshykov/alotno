@@ -66,7 +66,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 113873545;
+  int get rustContentHash => 2084377502;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -110,6 +110,8 @@ abstract class RustLibApi extends BaseApi {
     required List<int> pngBytes,
     required TraceOptions options,
   });
+
+  bool crateApiSimpleWebpLossySupportedNative();
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -373,6 +375,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "trace_png_to_svg",
         argNames: ["pngBytes", "options"],
+      );
+
+  @override
+  bool crateApiSimpleWebpLossySupportedNative() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSimpleWebpLossySupportedNativeConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSimpleWebpLossySupportedNativeConstMeta =>
+      const TaskConstMeta(
+        debugName: "webp_lossy_supported_native",
+        argNames: [],
       );
 
   @protected
