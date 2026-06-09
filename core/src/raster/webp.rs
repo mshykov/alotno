@@ -37,8 +37,8 @@ fn to_grayscale(image: &RgbaImage) -> RgbaImage {
     let mut px = image.pixels.clone();
     let mut i = 0;
     while i + 3 < px.len() {
-        let y = (0.299 * px[i] as f32 + 0.587 * px[i + 1] as f32 + 0.114 * px[i + 2] as f32)
-            .round() as u8;
+        let y = (0.299 * px[i] as f32 + 0.587 * px[i + 1] as f32 + 0.114 * px[i + 2] as f32).round()
+            as u8;
         px[i] = y;
         px[i + 1] = y;
         px[i + 2] = y;

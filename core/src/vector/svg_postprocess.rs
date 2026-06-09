@@ -26,8 +26,16 @@ pub(crate) fn apply(mut svg: String, o: &SvgOptions) -> String {
 
 /// Rewrite every `<path>`'s fill/stroke according to the draw + stroke style.
 fn restyle_paths(svg: &str, o: &SvgOptions) -> String {
-    let StrokeStyle { color, width, non_scaling } = &o.stroke;
-    let ve = if *non_scaling { " vector-effect=\"non-scaling-stroke\"" } else { "" };
+    let StrokeStyle {
+        color,
+        width,
+        non_scaling,
+    } = &o.stroke;
+    let ve = if *non_scaling {
+        " vector-effect=\"non-scaling-stroke\""
+    } else {
+        ""
+    };
 
     rewrite_paths(svg, |attrs| {
         let orig_fill = attr_str(attrs, "fill").unwrap_or_else(|| "#000000".into());
@@ -45,7 +53,9 @@ fn restyle_paths(svg: &str, o: &SvgOptions) -> String {
                 format!("fill=\"none\" stroke=\"{stroke_color}\" stroke-width=\"{width}\"{ve}")
             }
             DrawStyle::Both => {
-                format!("fill=\"{orig_fill}\" stroke=\"{stroke_color}\" stroke-width=\"{width}\"{ve}")
+                format!(
+                    "fill=\"{orig_fill}\" stroke=\"{stroke_color}\" stroke-width=\"{width}\"{ve}"
+                )
             }
         };
         format!("{kept} {paint}")
@@ -61,14 +71,18 @@ fn group_by_color(svg: &str) -> String {
 
     // Preserve order of first appearance.
     let mut order: Vec<String> = Vec::new();
-    let mut groups: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut groups: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     for attrs in path_elements(svg) {
         let fill = attr_str(&attrs, "fill").unwrap_or_else(|| "none".into());
         groups.entry(fill.clone()).or_insert_with(|| {
             order.push(fill.clone());
             Vec::new()
         });
-        groups.get_mut(&fill).unwrap().push(format!("<path {} />", attrs.trim()));
+        groups
+            .get_mut(&fill)
+            .unwrap()
+            .push(format!("<path {} />", attrs.trim()));
     }
 
     let mut body = String::new();
@@ -84,7 +98,10 @@ fn group_by_color(svg: &str) -> String {
 
 /// Wrap all content in a clip to the canvas bounds.
 fn clip_overflow(svg: &str) -> String {
-    let (w, h) = (svg_attr_number(svg, "width"), svg_attr_number(svg, "height"));
+    let (w, h) = (
+        svg_attr_number(svg, "width"),
+        svg_attr_number(svg, "height"),
+    );
     let (w, h) = match (w, h) {
         (Some(w), Some(h)) => (w, h),
         _ => return svg.to_string(),
@@ -110,8 +127,15 @@ fn apply_version(svg: &str, version: SvgVersion, adobe: bool) -> String {
             SvgVersion::V1_1 => ("1.1", ""),
             SvgVersion::Tiny1_2 => ("1.2", " baseProfile=\"tiny\""),
         };
-        let adobe_ns = if adobe { " xmlns:i=\"http://ns.adobe.com/AdobeIllustrator/10.0/\"" } else { "" };
-        format!("{} version=\"{ver}\"{profile} xmlns=\"http://www.w3.org/2000/svg\"{adobe_ns}", a.trim())
+        let adobe_ns = if adobe {
+            " xmlns:i=\"http://ns.adobe.com/AdobeIllustrator/10.0/\""
+        } else {
+            ""
+        };
+        format!(
+            "{} version=\"{ver}\"{profile} xmlns=\"http://www.w3.org/2000/svg\"{adobe_ns}",
+            a.trim()
+        )
     })
 }
 
@@ -162,7 +186,12 @@ fn rewrite_svg_tag(svg: &str, f: impl Fn(&str) -> String) -> String {
         Some(e) => e,
         None => return svg.to_string(),
     };
-    format!("{}<svg {}>{}", &svg[..start], f(&after[..end]).trim(), &after[end + 1..])
+    format!(
+        "{}<svg {}>{}",
+        &svg[..start],
+        f(&after[..end]).trim(),
+        &after[end + 1..]
+    )
 }
 
 /// Remove a single `name="..."` attribute (and namespaced `name:*`) from a string.
@@ -185,7 +214,9 @@ fn strip_attr(attrs: &str, name: &str) -> String {
 
 /// Split into (everything through the opening `<svg>` tag, inner body, `</svg>…`).
 fn split_body(svg: &str) -> Option<(&str, &str, &str)> {
-    let open_end = svg.find("<svg").and_then(|s| svg[s..].find('>').map(|e| s + e + 1))?;
+    let open_end = svg
+        .find("<svg")
+        .and_then(|s| svg[s..].find('>').map(|e| s + e + 1))?;
     let close = svg.rfind("</svg")?;
     Some((&svg[..open_end], &svg[open_end..close], &svg[close..]))
 }

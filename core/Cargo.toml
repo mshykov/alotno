@@ -23,6 +23,11 @@ image-webp = "0.2"
 # usvg it needs (svg2pdf::usvg), so we don't depend on usvg separately.
 svg2pdf = "0.12"
 
+[dev-dependencies]
+# Property testing: throws thousands of malformed `d` strings at the EPS/DXF
+# parsers to prove they never panic across the WASM/FFI boundary.
+proptest = "1"
+
 [features]
 default = []
 # Optional libwebp backend for best-quality LOSSY WebP on native targets.
