@@ -8,6 +8,9 @@ import 'package:path/path.dart' as p;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:alotno/conversion.dart';
+import 'package:alotno/desktop/settings_sheet.dart';
+import 'package:alotno/desktop/sidebar_content.dart';
+import 'package:alotno/desktop/store.dart';
 import 'package:alotno/src/rust/api/simple.dart';
 import 'package:alotno/widgets/converter_parts.dart';
 
@@ -33,7 +36,7 @@ class ConverterScreen extends StatefulWidget {
 
 class _ConverterScreenState extends State<ConverterScreen> {
   final List<_Item> _queue = [];
-  final Set<String> _formats = {'svg'};
+  Set<String> _formats = {'svg'};
   String _preset = 'high';
   String _colorMode = 'mono';
   bool _lossless = false;
@@ -41,6 +44,107 @@ class _ConverterScreenState extends State<ConverterScreen> {
   bool _dragging = false;
   bool _busy = false;
   String _status = 'Drop PNGs to begin.';
+  DesktopStore? _store;
+
+  @override
+  void initState() {
+    super.initState();
+    // Sidebar state (presets/recents/settings) loads async; UI works without it.
+    DesktopStore.open().then((s) {
+      if (!mounted) return;
+      setState(() {
+        _store = s;
+        _outDir ??= s.defaultOutDir;
+      });
+    });
+  }
+
+  // ---- sidebar actions ----
+
+  void _newConversion() => setState(() {
+        _queue.clear();
+        _status = 'Drop PNGs to begin.';
+      });
+
+  void _applyPreset(Preset p) => setState(() {
+        _formats = {...p.formats};
+        _preset = p.detail;
+        _colorMode = p.colorMode;
+        _lossless = p.lossless;
+        _status = 'Preset "${p.name}" applied.';
+      });
+
+  /// Drag PNGs onto a sidebar preset → convert immediately with that preset.
+  /// Output goes to the default folder (Settings) or next to each source.
+  Future<void> _quickConvertWithPreset(Preset preset, List<String> paths) async {
+    if (_busy) return;
+    _applyPreset(preset);
+    setState(() {
+      _busy = true;
+      _status = 'Converting ${paths.length} file(s) with "${preset.name}"…';
+    });
+    try {
+      final outputs = <File>[];
+      String? lastDir;
+      for (final path in paths) {
+        final dir = _store?.defaultOutDir ?? p.dirname(path);
+        lastDir = dir;
+        outputs.addAll(await convertToFiles(
+          pngPath: path,
+          formats: preset.formats,
+          outDir: dir,
+          options: traceOptions(preset: preset.detail, colorMode: preset.colorMode),
+          lossless: preset.lossless,
+        ));
+      }
+      await _recordRecent(
+        label: paths.length == 1
+            ? p.basename(paths.first)
+            : '${p.basename(paths.first)} +${paths.length - 1}',
+        outDir: lastDir!,
+        outputCount: outputs.length,
+        formats: preset.formats.toList(),
+      );
+      setState(() => _status =
+          'Done — ${outputs.length} file(s) via "${preset.name}".');
+      await launchUrl(Uri.directory(lastDir));
+    } catch (e) {
+      setState(() => _status = 'Failed: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _saveCurrentAsPreset(String name) async {
+    final store = _store;
+    if (store == null) return;
+    await store.addPreset(Preset(
+      name: name,
+      formats: {..._formats},
+      detail: _preset,
+      colorMode: _colorMode,
+      lossless: _lossless,
+    ));
+    if (mounted) setState(() => _status = 'Preset "$name" saved.');
+  }
+
+  Future<void> _recordRecent({
+    required String label,
+    required String outDir,
+    required int outputCount,
+    required List<String> formats,
+  }) async {
+    final store = _store;
+    if (store == null) return;
+    await store.addRecent(RecentEntry(
+      whenMillis: DateTime.now().millisecondsSinceEpoch,
+      label: label,
+      outDir: outDir,
+      outputCount: outputCount,
+      formats: formats,
+    ));
+    if (mounted) setState(() {});
+  }
 
   // ---- data helpers ----
 
@@ -142,6 +246,14 @@ class _ConverterScreenState extends State<ConverterScreen> {
       final savings = (count == 1)
           ? '${p.basename(lastOut!)} · ${humanSize(totalIn)} → ${humanSize(totalOut)}'
           : '$count file(s) · ${humanSize(totalOut)} total';
+      await _recordRecent(
+        label: _queue.length == 1
+            ? _queue.first.name
+            : '${_queue.first.name} +${_queue.length - 1}',
+        outDir: dir,
+        outputCount: count,
+        formats: _formats.toList(),
+      );
       setState(() => _status = 'Done — $savings');
     } catch (e) {
       setState(() => _status = 'Failed: $e');
@@ -168,7 +280,31 @@ class _ConverterScreenState extends State<ConverterScreen> {
   @override
   Widget build(BuildContext context) {
     final canConvert = _queue.isNotEmpty && _formats.isNotEmpty && _outDir != null && !_busy;
+    final store = _store;
     return MacosWindow(
+      sidebar: Sidebar(
+        minWidth: 220,
+        builder: (context, scrollController) => store == null
+            ? const SizedBox.shrink()
+            : SidebarContent(
+                store: store,
+                busy: _busy,
+                onNew: _newConversion,
+                onApplyPreset: _applyPreset,
+                onDropOnPreset: _quickConvertWithPreset,
+                onSaveCurrentAsPreset: _saveCurrentAsPreset,
+                onOpenRecent: (e) => launchUrl(Uri.directory(e.outDir)),
+                onOpenSettings: () => showSettingsSheet(
+                  context,
+                  store,
+                  onChanged: () {
+                    if (mounted) {
+                      setState(() => _outDir = store.defaultOutDir ?? _outDir);
+                    }
+                  },
+                ),
+              ),
+      ),
       child: MacosScaffold(
         toolBar: ToolBar(
           title: const Text('Alotno'),
