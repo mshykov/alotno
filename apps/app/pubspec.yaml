@@ -51,6 +51,8 @@ dependencies:
   # dir and hand the files to the native share sheet.
   share_plus: ^10.1.4
   path_provider: ^2.1.5
+  # "Save WebP to Photos" on mobile (Photos can't take SVG/PDF/EPS/DXF).
+  gal: ^2.3.0
 
 dev_dependencies:
   flutter_test:

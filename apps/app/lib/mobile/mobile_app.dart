@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 import 'package:alotno/design/tokens.dart';
@@ -12,11 +13,22 @@ class MobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const seed = Tokens.colorBrand500;
+    // Light Cupertino touch: iOS gets its native page-transition feel (paired
+    // with Switch.adaptive / CircularProgressIndicator.adaptive in the page).
+    const transitions = PageTransitionsTheme(builders: {
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.android: ZoomPageTransitionsBuilder(),
+    });
     return MaterialApp(
       title: 'Alotno',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: seed, useMaterial3: true),
-      darkTheme: ThemeData(colorSchemeSeed: seed, brightness: Brightness.dark, useMaterial3: true),
+      theme: ThemeData(colorSchemeSeed: seed, useMaterial3: true, pageTransitionsTheme: transitions),
+      darkTheme: ThemeData(
+        colorSchemeSeed: seed,
+        brightness: Brightness.dark,
+        useMaterial3: true,
+        pageTransitionsTheme: transitions,
+      ),
       home: const MobileConverterPage(),
     );
   }

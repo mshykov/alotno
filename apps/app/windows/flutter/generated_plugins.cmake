@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_drop
+  gal
   screen_retriever_windows
   share_plus
   tray_manager
