@@ -4,12 +4,9 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 
-import 'package:alotno/conversion.dart' show humanSize;
+import 'package:alotno/conversion.dart' show humanSize, allFormats;
 import 'package:alotno/design/tokens.dart';
 import 'package:alotno/theme.dart';
-
-/// All output formats the UI offers, in display order.
-const kAllFormats = ['svg', 'pdf', 'eps', 'dxf', 'webp'];
 
 /// Small uppercase section heading ("OUTPUT FORMATS", "OPTIONS", …).
 class SectionLabel extends StatelessWidget {
@@ -147,7 +144,7 @@ class FormatChips extends StatelessWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: kAllFormats.map((f) {
+      children: allFormats.map((f) {
         final on = selected.contains(f);
         return PushButton(
           controlSize: ControlSize.regular,

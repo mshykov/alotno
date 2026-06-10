@@ -47,6 +47,10 @@ dependencies:
   # Sandbox-legal way to reveal the output folder (NSWorkspace under the hood),
   # instead of spawning `open`, which the macOS App Sandbox blocks.
   url_launcher: ^6.3.0
+  # Mobile output: phones have no chosen output folder, so we convert into a temp
+  # dir and hand the files to the native share sheet.
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
