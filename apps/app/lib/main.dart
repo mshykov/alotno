@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/widgets.dart';
@@ -9,13 +11,24 @@ import 'package:window_manager/window_manager.dart';
 
 import 'package:alotno/conversion.dart';
 import 'package:alotno/converter_screen.dart';
+import 'package:alotno/mobile/mobile_app.dart';
 import 'package:alotno/src/rust/frb_generated.dart';
+
+/// Desktop = window + menu-bar shell (macos_ui); mobile = Material share-sheet UI.
+bool get _isDesktop => Platform.isMacOS || Platform.isWindows || Platform.isLinux;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
   await RustLib.init();
 
+  // iOS / Android: a plain Material app — no window/tray (those plugins are
+  // desktop-only and are never touched here).
+  if (!_isDesktop) {
+    runApp(const MobileApp());
+    return;
+  }
+
+  await windowManager.ensureInitialized();
   await windowManager.waitUntilReadyToShow(
     const WindowOptions(size: Size(620, 760), center: true, title: 'Alotno'),
     () async {
