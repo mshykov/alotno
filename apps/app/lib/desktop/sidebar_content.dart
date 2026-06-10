@@ -5,15 +5,14 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:alotno/desktop/store.dart';
 import 'package:alotno/theme.dart';
 
-/// The left sidebar: brand, New conversion, PRESETS (click to apply, drop PNGs
-/// to convert instantly), RECENT (click to reveal), Settings at the bottom.
+/// The left sidebar: brand, PRESETS (click to apply, drop PNGs to convert
+/// instantly), RECENT (click to reveal), Settings at the bottom.
 /// Pure content widget — all behavior is injected by the converter screen.
 class SidebarContent extends StatefulWidget {
   const SidebarContent({
     super.key,
     required this.store,
     required this.busy,
-    required this.onNew,
     required this.onApplyPreset,
     required this.onDropOnPreset,
     required this.onSaveCurrentAsPreset,
@@ -23,7 +22,6 @@ class SidebarContent extends StatefulWidget {
 
   final DesktopStore store;
   final bool busy;
-  final VoidCallback onNew;
   final void Function(Preset preset) onApplyPreset;
   final void Function(Preset preset, List<String> paths) onDropOnPreset;
   final void Function(String name) onSaveCurrentAsPreset;
@@ -58,25 +56,7 @@ class _SidebarContentState extends State<SidebarContent> {
           ),
         ),
 
-        // ---- New conversion ----
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: PushButton(
-            controlSize: ControlSize.regular,
-            secondary: true,
-            onPressed: widget.busy ? null : widget.onNew,
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                MacosIcon(CupertinoIcons.add, size: 13),
-                SizedBox(width: 6),
-                Text('New conversion'),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 4),
 
         // ---- Scrollable middle: presets + recents ----
         Expanded(
