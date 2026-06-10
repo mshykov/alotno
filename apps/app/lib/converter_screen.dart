@@ -59,11 +59,16 @@ class _ConverterScreenState extends State<ConverterScreen> {
     });
   }
 
-  // ---- sidebar actions ----
+  // ---- sidebar / option actions ----
 
-  void _newConversion() => setState(() {
-        _queue.clear();
-        _status = 'Drop PNGs to begin.';
+  /// Quiet "Reset" next to the OPTIONS header: restores job parameters to the
+  /// app defaults (queue is untouched — clearing it is the toolbar's job).
+  void _resetOptions() => setState(() {
+        _formats = {'svg'};
+        _preset = 'high';
+        _colorMode = 'mono';
+        _lossless = false;
+        _status = 'Options reset to defaults.';
       });
 
   void _applyPreset(Preset p) => setState(() {
@@ -289,7 +294,6 @@ class _ConverterScreenState extends State<ConverterScreen> {
             : SidebarContent(
                 store: store,
                 busy: _busy,
-                onNew: _newConversion,
                 onApplyPreset: _applyPreset,
                 onDropOnPreset: _quickConvertWithPreset,
                 onSaveCurrentAsPreset: _saveCurrentAsPreset,
@@ -365,7 +369,20 @@ class _ConverterScreenState extends State<ConverterScreen> {
                         onToggle: (f) => setState(() => _formats.contains(f) ? _formats.remove(f) : _formats.add(f)),
                       ),
                       const SizedBox(height: 20),
-                      const SectionLabel('Options'),
+                      Row(
+                        children: [
+                          const SectionLabel('Options'),
+                          const Spacer(),
+                          // Quiet, contextual reset — secondary by design.
+                          MacosIconButton(
+                            icon: const MacosIcon(
+                                CupertinoIcons.arrow_counterclockwise,
+                                size: 13),
+                            padding: EdgeInsets.zero,
+                            onPressed: _busy ? null : _resetOptions,
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       OptionsPanel(
                         preset: _preset,
