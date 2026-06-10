@@ -30,7 +30,13 @@ Future<void> main() async {
 
   await windowManager.ensureInitialized();
   await windowManager.waitUntilReadyToShow(
-    const WindowOptions(size: Size(620, 760), center: true, title: 'Alotno'),
+    // Landscape: sidebar (presets/recents) + converter pane.
+    const WindowOptions(
+      size: Size(960, 640),
+      minimumSize: Size(820, 560),
+      center: true,
+      title: 'Alotno',
+    ),
     () async {
       await windowManager.show();
       await windowManager.focus();
