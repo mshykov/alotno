@@ -1,8 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- allowBackup=false: conversions are ephemeral (no user data worth cloud
+         backup), and not opting out would let app data land in device/cloud
+         backups — at odds with the "nothing leaves your machine" promise. -->
     <application
         android:label="Alotno"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"

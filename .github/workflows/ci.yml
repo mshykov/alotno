@@ -54,7 +54,8 @@ jobs:
           channel: stable
           cache: true
       - name: Pub get
-        run: flutter pub get
+        # --enforce-lockfile: resolve exactly what pubspec.lock pins (S8550).
+        run: flutter pub get --enforce-lockfile
         working-directory: apps/app
       - name: Analyze
         run: flutter analyze
@@ -65,6 +66,23 @@ jobs:
         # needs a native window), so we test the leaf widgets instead.
         run: flutter test
         working-directory: apps/app
+
+  # ---- SonarCloud: CI-based scan (Automatic Analysis is off) ----
+  # Respects sonar-project.properties (exclusions, project key) — which the
+  # automatic mode ignored. Decorates PRs; not a required merge check.
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    # Secrets aren't available to fork PRs; skip there rather than fail.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Full history — Sonar needs it for blame / new-code detection.
+          fetch-depth: 0
+      - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   # ---- Web: tokens + type-check + build (consumes the WASM bundle) ----
   web:
@@ -84,7 +102,9 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts: no lifecycle scripts from deps (S6505). pnpm 10 already
+      # blocks unapproved build scripts, so this is explicit, not a behavior change.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Generate design tokens
         run: pnpm --filter @alotno/design build
       - name: Verify committed Flutter tokens are in sync with the generator
