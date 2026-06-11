@@ -54,7 +54,8 @@ jobs:
           channel: stable
           cache: true
       - name: Pub get
-        run: flutter pub get
+        # --enforce-lockfile: resolve exactly what pubspec.lock pins (S8550).
+        run: flutter pub get --enforce-lockfile
         working-directory: apps/app
       - name: Analyze
         run: flutter analyze
@@ -101,7 +102,9 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts: no lifecycle scripts from deps (S6505). pnpm 10 already
+      # blocks unapproved build scripts, so this is explicit, not a behavior change.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Generate design tokens
         run: pnpm --filter @alotno/design build
       - name: Verify committed Flutter tokens are in sync with the generator
