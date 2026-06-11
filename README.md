@@ -8,6 +8,9 @@
 
 [alotno.app](https://alotno.app)
 
+[![Quality gate](https://sonarcloud.io/api/project_badges/measure?project=mshykov_alotno&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=mshykov_alotno)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=mshykov_alotno&metric=coverage)](https://sonarcloud.io/summary/new_code?id=mshykov_alotno)
+
 </div>
 
 ---
