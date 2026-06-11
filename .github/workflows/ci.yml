@@ -90,6 +90,24 @@ jobs:
       - name: Resolve Dart packages for the scanner
         run: flutter pub get --enforce-lockfile
         working-directory: apps/app
+      # ---- coverage reports fed to the scan ----
+      - name: Dart coverage (lcov)
+        # lcov SF: paths are relative to apps/app — rewrite to repo-relative so
+        # they match the scanner's file keys.
+        run: |
+          flutter test --coverage
+          sed -i 's|^SF:|SF:apps/app/|' coverage/lcov.info
+        working-directory: apps/app
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: stable
+          components: llvm-tools
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: taiki-e/install-action@0631aa6515c7d545823c67cfae7ef4fc7f490154 # v2
+        with:
+          tool: cargo-llvm-cov
+      - name: Rust coverage (lcov)
+        run: cargo llvm-cov --workspace --all-features --lcov --output-path rust-lcov.info
       - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
