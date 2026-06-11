@@ -80,6 +80,16 @@ jobs:
         with:
           # Full history — Sonar needs it for blame / new-code detection.
           fetch-depth: 0
+      # Sonar's Dart analyzer needs resolved packages (package_config), else
+      # every Flutter symbol is "undefined" and it emits ~1200 false S2260s.
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.44.1
+          channel: stable
+          cache: true
+      - name: Resolve Dart packages for the scanner
+        run: flutter pub get --enforce-lockfile
+        working-directory: apps/app
       - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

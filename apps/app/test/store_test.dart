@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:alotno/desktop/store.dart';
 
+const _outDir = '/tmp/out';
+
 void main() {
   late Directory dir;
   late File file;
@@ -38,10 +40,10 @@ void main() {
     await store.addRecent(RecentEntry(
         whenMillis: 1700000000000,
         label: 'falcon.png',
-        outDir: '/tmp/out',
+        outDir: _outDir,
         outputCount: 2,
         formats: const ['svg', 'webp']));
-    store.defaultOutDir = '/tmp/out';
+    store.defaultOutDir = _outDir;
     await store.save();
 
     final reloaded = DesktopStore(file);
@@ -52,7 +54,7 @@ void main() {
     expect(p.lossless, isTrue);
     expect(reloaded.recents.single.label, 'falcon.png');
     expect(reloaded.recents.single.outputCount, 2);
-    expect(reloaded.defaultOutDir, '/tmp/out');
+    expect(reloaded.defaultOutDir, _outDir);
   });
 
   test('addPreset with same name replaces, removePreset deletes', () async {

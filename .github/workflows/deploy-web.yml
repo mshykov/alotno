@@ -31,7 +31,8 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts mirrors ci.yml (S6505); pnpm 10 blocks them anyway.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Generate design tokens
         run: pnpm --filter @alotno/design build
       - name: Build site

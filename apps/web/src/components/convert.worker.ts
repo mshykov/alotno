@@ -35,7 +35,13 @@ const ready = (async () => {
   ctx.postMessage({ type: "ready", lossySupported: wasm.webpLossySupported() });
 })();
 
-ctx.onmessage = async (e: MessageEvent) => {
+// onmessage expects a void handler; run the async work behind a void wrapper
+// (rejections are impossible by construction — every convert is try/caught).
+ctx.onmessage = (e: MessageEvent) => {
+  void handleConvert(e);
+};
+
+async function handleConvert(e: MessageEvent): Promise<void> {
   const msg = e.data as ConvertMsg;
   if (msg?.type !== "convert") return;
   await ready;
@@ -69,4 +75,4 @@ ctx.onmessage = async (e: MessageEvent) => {
   }
 
   ctx.postMessage({ type: "result", reqId: msg.reqId, out, inBytes, outBytes, failed });
-};
+}
