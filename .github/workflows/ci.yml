@@ -66,6 +66,23 @@ jobs:
         run: flutter test
         working-directory: apps/app
 
+  # ---- SonarCloud: CI-based scan (Automatic Analysis is off) ----
+  # Respects sonar-project.properties (exclusions, project key) — which the
+  # automatic mode ignored. Decorates PRs; not a required merge check.
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    # Secrets aren't available to fork PRs; skip there rather than fail.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Full history — Sonar needs it for blame / new-code detection.
+          fetch-depth: 0
+      - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   # ---- Web: tokens + type-check + build (consumes the WASM bundle) ----
   web:
     # Name kept exactly as the branch-protection required-check context on `main`.
