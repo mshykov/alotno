@@ -153,35 +153,46 @@ class _ConverterScreenState extends State<ConverterScreen> {
 
   // ---- data helpers ----
 
+  /// Read one PNG into a queue item; null = unreadable (permission, missing…).
+  Future<_Item?> _loadItem(String path) async {
+    try {
+      final bytes = await File(path).readAsBytes();
+      // Dimensions come from the core (no in-Dart PNG parsing); 0×0 if unreadable.
+      var w = 0, h = 0;
+      try {
+        final d = await imageDimensions(pngBytes: bytes);
+        w = d.width;
+        h = d.height;
+      } catch (_) {}
+      return _Item(path, p.basename(path), bytes, w, h);
+    } catch (_) {
+      return null; // report rather than swallow — counted by the caller
+    }
+  }
+
+  static String _addStatus(int added, int failed) {
+    if (added > 0) {
+      return failed > 0 ? '$added added, $failed unreadable.' : '$added file(s) added.';
+    }
+    return failed > 0 ? 'Could not read $failed file(s).' : 'No new PNGs.';
+  }
+
   Future<void> _addPaths(Iterable<String> paths) async {
     var added = 0;
     var failed = 0;
     for (final path in paths) {
       if (!path.toLowerCase().endsWith('.png')) continue;
       if (_queue.any((i) => i.path == path)) continue;
-      try {
-        final bytes = await File(path).readAsBytes();
-        // Dimensions come from the core (no in-Dart PNG parsing); 0×0 if unreadable.
-        var w = 0, h = 0;
-        try {
-          final d = await imageDimensions(pngBytes: bytes);
-          w = d.width;
-          h = d.height;
-        } catch (_) {}
-        _queue.add(_Item(path, p.basename(path), bytes, w, h));
+      final item = await _loadItem(path);
+      if (item == null) {
+        failed++;
+      } else {
+        _queue.add(item);
         added++;
-      } catch (_) {
-        failed++; // unreadable / permission denied — report rather than swallow
       }
     }
     if (mounted) {
-      setState(() {
-        if (added > 0) {
-          _status = failed > 0 ? '$added added, $failed unreadable.' : '$added file(s) added.';
-        } else {
-          _status = failed > 0 ? 'Could not read $failed file(s).' : 'No new PNGs.';
-        }
-      });
+      setState(() => _status = _addStatus(added, failed));
     }
   }
 
