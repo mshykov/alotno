@@ -18,5 +18,10 @@ export default defineConfig({
       // Allow importing the wasm bundle from the repo root (outside apps/web).
       fs: { allow: [repoRoot] },
     },
+    worker: {
+      // The convert worker is a module worker using top-level await; vite's
+      // default IIFE worker format can't express that.
+      format: "es",
+    },
   },
 });

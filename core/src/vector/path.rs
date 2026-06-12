@@ -108,123 +108,190 @@ fn is_command(tok: &str) -> bool {
 /// `M 0 0 1 1 2 2` is a moveto followed by two implicit linetos), and the
 /// `H`/`V` shorthands. See [`PathCmd`] for the `S`/`Q`/`T`/`A` fallback.
 pub(crate) fn parse_path(d: &str) -> Vec<PathCmd> {
-    let tokens = tokenize(d);
-    let mut cmds = Vec::new();
-    // current point, and the start of the current subpath (for Z)
-    let (mut cx, mut cy, mut sx, mut sy) = (0.0_f64, 0.0_f64, 0.0_f64, 0.0_f64);
-    let mut i = 0;
-    let mut cmd: u8 = 0; // active command letter; 0 = none seen yet
+    PathParser::new(d).run()
+}
 
-    // Read `n` numeric operands starting at `i` WITHOUT advancing on failure.
-    // Returns None if fewer than `n` numeric tokens remain (truncated input).
-    let take = |i: usize, n: usize| -> Option<Vec<f64>> {
+/// Cursor state for [`parse_path`]: token stream, active command letter, the
+/// current point, and the subpath start (for `Z`). Each SVG command is one
+/// small method, so every piece stays simple and obviously bounds-checked.
+struct PathParser {
+    tokens: Vec<String>,
+    i: usize,
+    /// Active command letter; 0 = none seen yet.
+    cmd: u8,
+    cx: f64,
+    cy: f64,
+    sx: f64,
+    sy: f64,
+    cmds: Vec<PathCmd>,
+}
+
+impl PathParser {
+    fn new(d: &str) -> Self {
+        PathParser {
+            tokens: tokenize(d),
+            i: 0,
+            cmd: 0,
+            cx: 0.0,
+            cy: 0.0,
+            sx: 0.0,
+            sy: 0.0,
+            cmds: Vec::new(),
+        }
+    }
+
+    fn run(mut self) -> Vec<PathCmd> {
+        while self.i < self.tokens.len() {
+            if is_command(&self.tokens[self.i]) {
+                self.cmd = self.tokens[self.i].as_bytes()[0];
+                self.i += 1;
+            } else if self.cmd == 0 {
+                // Numeric token before any command — malformed; skip it.
+                self.i += 1;
+                continue;
+            }
+            if !self.apply_command() {
+                break; // truncated operands → stop cleanly
+            }
+        }
+        self.cmds
+    }
+
+    /// Apply the active command once. Returns false on truncated input.
+    fn apply_command(&mut self) -> bool {
+        match self.cmd.to_ascii_uppercase() {
+            b'M' => self.move_to(),
+            b'L' => self.line_to(),
+            b'H' => self.horizontal(),
+            b'V' => self.vertical(),
+            b'C' => self.curve_to(),
+            // Unsupported curve shorthands: consume the right operand count and
+            // line to the endpoint (never produced by vtracer; see PathCmd).
+            b'S' | b'Q' => self.line_to_endpoint(4, 2, 3),
+            b'T' => self.line_to_endpoint(2, 0, 1),
+            b'A' => self.line_to_endpoint(7, 5, 6),
+            b'Z' => {
+                self.close();
+                true
+            }
+            _ => {
+                // Unknown command letter: skip any operands that follow it.
+                self.cmd = 0;
+                true
+            }
+        }
+    }
+
+    /// Read `n` numeric operands, advancing only on success. None = truncated.
+    fn take(&mut self, n: usize) -> Option<Vec<f64>> {
         let mut vals = Vec::with_capacity(n);
         for k in 0..n {
-            let t = tokens.get(i + k)?;
+            let t = self.tokens.get(self.i + k)?;
             if is_command(t) {
                 return None;
             }
             vals.push(t.parse::<f64>().unwrap_or(0.0));
         }
+        self.i += n;
         Some(vals)
-    };
+    }
 
-    while i < tokens.len() {
-        if is_command(&tokens[i]) {
-            cmd = tokens[i].as_bytes()[0];
-            i += 1;
-        } else if cmd == 0 {
-            // Numeric token before any command — malformed; skip it.
-            i += 1;
-            continue;
-        }
-
-        let rel = cmd.is_ascii_lowercase();
-        match cmd.to_ascii_uppercase() {
-            b'M' => {
-                let Some(v) = take(i, 2) else { break };
-                i += 2;
-                cx = if rel { cx + v[0] } else { v[0] };
-                cy = if rel { cy + v[1] } else { v[1] };
-                sx = cx;
-                sy = cy;
-                cmds.push(PathCmd::Move { x: cx, y: cy });
-                // Per SVG: coordinates following a moveto are implicit linetos.
-                cmd = if rel { b'l' } else { b'L' };
-            }
-            b'L' => {
-                let Some(v) = take(i, 2) else { break };
-                i += 2;
-                cx = if rel { cx + v[0] } else { v[0] };
-                cy = if rel { cy + v[1] } else { v[1] };
-                cmds.push(PathCmd::Line { x: cx, y: cy });
-            }
-            b'H' => {
-                let Some(v) = take(i, 1) else { break };
-                i += 1;
-                cx = if rel { cx + v[0] } else { v[0] };
-                cmds.push(PathCmd::Line { x: cx, y: cy });
-            }
-            b'V' => {
-                let Some(v) = take(i, 1) else { break };
-                i += 1;
-                cy = if rel { cy + v[0] } else { v[0] };
-                cmds.push(PathCmd::Line { x: cx, y: cy });
-            }
-            b'C' => {
-                let Some(v) = take(i, 6) else { break };
-                i += 6;
-                let b = |dx: f64, base: f64| if rel { base + dx } else { dx };
-                let (x1, y1) = (b(v[0], cx), b(v[1], cy));
-                let (x2, y2) = (b(v[2], cx), b(v[3], cy));
-                let (x, y) = (b(v[4], cx), b(v[5], cy));
-                cmds.push(PathCmd::Curve {
-                    x1,
-                    y1,
-                    x2,
-                    y2,
-                    x,
-                    y,
-                });
-                cx = x;
-                cy = y;
-            }
-            // Unsupported curve shorthands: consume the right operand count and
-            // emit a line to the endpoint (never produced by vtracer; see PathCmd).
-            b'S' | b'Q' => {
-                let Some(v) = take(i, 4) else { break };
-                i += 4;
-                cx = if rel { cx + v[2] } else { v[2] };
-                cy = if rel { cy + v[3] } else { v[3] };
-                cmds.push(PathCmd::Line { x: cx, y: cy });
-            }
-            b'T' => {
-                let Some(v) = take(i, 2) else { break };
-                i += 2;
-                cx = if rel { cx + v[0] } else { v[0] };
-                cy = if rel { cy + v[1] } else { v[1] };
-                cmds.push(PathCmd::Line { x: cx, y: cy });
-            }
-            b'A' => {
-                let Some(v) = take(i, 7) else { break };
-                i += 7;
-                cx = if rel { cx + v[5] } else { v[5] };
-                cy = if rel { cy + v[6] } else { v[6] };
-                cmds.push(PathCmd::Line { x: cx, y: cy });
-            }
-            b'Z' => {
-                cx = sx;
-                cy = sy;
-                cmds.push(PathCmd::Close);
-                cmd = 0; // Z takes no operands; require a new command next.
-            }
-            _ => {
-                // Unknown command letter: skip any operands that follow it.
-                cmd = 0;
-            }
+    /// Resolve an operand against `base` when the active command is relative.
+    fn abs(&self, v: f64, base: f64) -> f64 {
+        if self.cmd.is_ascii_lowercase() {
+            base + v
+        } else {
+            v
         }
     }
-    cmds
+
+    fn move_to(&mut self) -> bool {
+        let Some(v) = self.take(2) else { return false };
+        self.cx = self.abs(v[0], self.cx);
+        self.cy = self.abs(v[1], self.cy);
+        self.sx = self.cx;
+        self.sy = self.cy;
+        self.cmds.push(PathCmd::Move {
+            x: self.cx,
+            y: self.cy,
+        });
+        // Per SVG: coordinates following a moveto are implicit linetos.
+        self.cmd = if self.cmd.is_ascii_lowercase() {
+            b'l'
+        } else {
+            b'L'
+        };
+        true
+    }
+
+    fn line_to(&mut self) -> bool {
+        let Some(v) = self.take(2) else { return false };
+        self.cx = self.abs(v[0], self.cx);
+        self.cy = self.abs(v[1], self.cy);
+        self.cmds.push(PathCmd::Line {
+            x: self.cx,
+            y: self.cy,
+        });
+        true
+    }
+
+    fn horizontal(&mut self) -> bool {
+        let Some(v) = self.take(1) else { return false };
+        self.cx = self.abs(v[0], self.cx);
+        self.cmds.push(PathCmd::Line {
+            x: self.cx,
+            y: self.cy,
+        });
+        true
+    }
+
+    fn vertical(&mut self) -> bool {
+        let Some(v) = self.take(1) else { return false };
+        self.cy = self.abs(v[0], self.cy);
+        self.cmds.push(PathCmd::Line {
+            x: self.cx,
+            y: self.cy,
+        });
+        true
+    }
+
+    fn curve_to(&mut self) -> bool {
+        let Some(v) = self.take(6) else { return false };
+        // All six offsets resolve against the point *before* this command.
+        let (x1, y1) = (self.abs(v[0], self.cx), self.abs(v[1], self.cy));
+        let (x2, y2) = (self.abs(v[2], self.cx), self.abs(v[3], self.cy));
+        let (x, y) = (self.abs(v[4], self.cx), self.abs(v[5], self.cy));
+        self.cmds.push(PathCmd::Curve {
+            x1,
+            y1,
+            x2,
+            y2,
+            x,
+            y,
+        });
+        self.cx = x;
+        self.cy = y;
+        true
+    }
+
+    /// Consume `n` operands and line to the endpoint at indices (`xi`, `yi`).
+    fn line_to_endpoint(&mut self, n: usize, xi: usize, yi: usize) -> bool {
+        let Some(v) = self.take(n) else { return false };
+        self.cx = self.abs(v[xi], self.cx);
+        self.cy = self.abs(v[yi], self.cy);
+        self.cmds.push(PathCmd::Line {
+            x: self.cx,
+            y: self.cy,
+        });
+        true
+    }
+
+    fn close(&mut self) {
+        self.cx = self.sx;
+        self.cy = self.sy;
+        self.cmds.push(PathCmd::Close);
+        self.cmd = 0; // Z takes no operands; require a new command next.
+    }
 }
 
 /// A single subpath flattened to absolute points, plus whether it was closed.

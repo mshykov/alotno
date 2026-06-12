@@ -21,19 +21,21 @@ type ConvertMsg = {
   mono: boolean;
 };
 
-// `self` is typed as a Window under the DOM lib; cast to the worker surface we use.
+// `globalThis` is typed as a Window under the DOM lib; cast to the worker
+// surface we use.
 type WorkerCtx = {
   postMessage: (message: unknown) => void;
   onmessage: ((e: MessageEvent) => void) | null;
 };
-const ctx = self as unknown as WorkerCtx;
+const ctx = globalThis as unknown as WorkerCtx;
 
 const enc = new TextEncoder();
 
-const ready = (async () => {
-  await init();
-  ctx.postMessage({ type: "ready", lossySupported: wasm.webpLossySupported() });
-})();
+// Top-level await: a module worker queues incoming messages until the module
+// (including this await) finishes evaluating, so no ready-gating is needed in
+// the handler.
+await init();
+ctx.postMessage({ type: "ready", lossySupported: wasm.webpLossySupported() });
 
 // onmessage expects a void handler; run the async work behind a void wrapper
 // (rejections are impossible by construction — every convert is try/caught).
@@ -44,7 +46,6 @@ ctx.onmessage = (e: MessageEvent) => {
 async function handleConvert(e: MessageEvent): Promise<void> {
   const msg = e.data as ConvertMsg;
   if (msg?.type !== "convert") return;
-  await ready;
 
   const out: Record<string, Uint8Array> = {};
   const failed: { name: string; fmt: string; error: string }[] = [];

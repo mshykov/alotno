@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -73,10 +74,48 @@ Future<File> convertPngToSvgFile(String pngPath, {String? outDir}) async {
   return file;
 }
 
+/// Convert PNG bytes to one output format and write it to [file]. The single
+/// home of the per-format FFI switch — desktop and mobile both call this.
+/// Returns the number of bytes/chars written.
+Future<int> writeConverted({
+  required Uint8List bytes,
+  required String fmt,
+  required File file,
+  required TraceOptions options,
+  bool lossless = false,
+}) async {
+  switch (fmt) {
+    case 'svg':
+      final s = await tracePngToSvg(pngBytes: bytes, options: options);
+      await file.writeAsString(s);
+      return s.length;
+    case 'eps':
+      final s = await convertPngToEps(pngBytes: bytes, options: options);
+      await file.writeAsString(s);
+      return s.length;
+    case 'dxf':
+      final s = await convertPngToDxf(pngBytes: bytes, options: options);
+      await file.writeAsString(s);
+      return s.length;
+    case 'pdf':
+      final b = await convertPngToPdf(pngBytes: bytes, options: options);
+      await file.writeAsBytes(b);
+      return b.length;
+    default: // webp
+      final b = await convertPngToWebp(
+        pngBytes: bytes,
+        quality: 82,
+        lossless: lossless,
+        mono: options.colorMode == 'mono',
+      );
+      await file.writeAsBytes(b);
+      return b.length;
+  }
+}
+
 /// Convert one PNG into every requested format, writing each into `outDir`
 /// (atomically, no overwrite) and returning the written files. The mobile UI
-/// passes a temp dir and hands the result to the share sheet; the same FFI
-/// switch the desktop screen uses.
+/// passes a temp dir and hands the result to the share sheet.
 Future<List<File>> convertToFiles({
   required String pngPath,
   required Set<String> formats,
@@ -90,23 +129,7 @@ Future<List<File>> convertToFiles({
   final out = <File>[];
   for (final fmt in formats) {
     final file = await createUnique(outDir, base, fmt);
-    switch (fmt) {
-      case 'svg':
-        await file.writeAsString(await tracePngToSvg(pngBytes: bytes, options: opts));
-      case 'eps':
-        await file.writeAsString(await convertPngToEps(pngBytes: bytes, options: opts));
-      case 'dxf':
-        await file.writeAsString(await convertPngToDxf(pngBytes: bytes, options: opts));
-      case 'pdf':
-        await file.writeAsBytes(await convertPngToPdf(pngBytes: bytes, options: opts));
-      default: // webp
-        await file.writeAsBytes(await convertPngToWebp(
-          pngBytes: bytes,
-          quality: 82,
-          lossless: lossless,
-          mono: opts.colorMode == 'mono',
-        ));
-    }
+    await writeConverted(bytes: bytes, fmt: fmt, file: file, options: opts, lossless: lossless);
     out.add(file);
   }
   return out;

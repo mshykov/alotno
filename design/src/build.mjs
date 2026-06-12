@@ -35,7 +35,7 @@ function validate(flatTokens, label) {
   for (const [k, v] of Object.entries(flatTokens)) {
     if (typeof v === "number") continue;
     if (typeof v !== "string") {
-      throw new Error(`tokens.json (${label}): "${k}" must be a string or number, got ${typeof v}`);
+      throw new TypeError(`tokens.json (${label}): "${k}" must be a string or number, got ${typeof v}`);
     }
     if (v.startsWith("#") && !HEX.test(v)) {
       throw new Error(`tokens.json (${label}): "${k}" is not a 3/6/8-digit hex color: ${v}`);
@@ -51,11 +51,12 @@ for (const req of ["color", "font", "space", "radius"]) {
 }
 validate(flat, "light");
 
-const kebab = (s) => s.replace(/\./g, "-").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+const kebab = (s) => s.replaceAll(".", "-").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 const isPx = (path) => /^(font\.size|space|radius)\./.test(path) && typeof flat[path] === "number";
 
 // ---- CSS custom properties ----
-const cssVar = ([k, v]) => `  --${kebab(k)}: ${isPx(k) ? `${v}px` : v};`;
+const cssValue = (k, v) => (isPx(k) ? v + "px" : v);
+const cssVar = ([k, v]) => `  --${kebab(k)}: ${cssValue(k, v)};`;
 let css =
   `/* GENERATED from design/tokens.json — do not edit by hand. */\n:root {\n` +
   Object.entries(flat).map(cssVar).join("\n") +
@@ -93,7 +94,7 @@ const cleanTs =
 // ---- Dart ----
 const dartName = (k) =>
   k
-    .split(/[.\-]/)
+    .split(/[.-]/)
     .map((p, i) => (i === 0 ? p : p[0].toUpperCase() + p.slice(1)))
     .join("");
 // #rgb / #rrggbb / #rrggbbaa → Dart Color(0xAARRGGBB). Handles all valid hex

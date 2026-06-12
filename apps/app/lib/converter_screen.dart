@@ -214,35 +214,13 @@ class _ConverterScreenState extends State<ConverterScreen> {
         final base = item.name.replaceAll(RegExp(r'\.png$', caseSensitive: false), '');
         for (final fmt in _formats) {
           final file = await createUnique(dir, base, fmt); // atomic, no overwrite
-          int len;
-          switch (fmt) {
-            case 'svg':
-              final s = await tracePngToSvg(pngBytes: item.bytes, options: opts);
-              await file.writeAsString(s);
-              len = s.length;
-            case 'eps':
-              final s = await convertPngToEps(pngBytes: item.bytes, options: opts);
-              await file.writeAsString(s);
-              len = s.length;
-            case 'dxf':
-              final s = await convertPngToDxf(pngBytes: item.bytes, options: opts);
-              await file.writeAsString(s);
-              len = s.length;
-            case 'pdf':
-              final b = await convertPngToPdf(pngBytes: item.bytes, options: opts);
-              await file.writeAsBytes(b);
-              len = b.length;
-            default: // webp
-              final b = await convertPngToWebp(
-                pngBytes: item.bytes,
-                quality: 82,
-                lossless: _lossless,
-                mono: _colorMode == 'mono',
-              );
-              await file.writeAsBytes(b);
-              len = b.length;
-          }
-          totalOut += len;
+          totalOut += await writeConverted(
+            bytes: item.bytes,
+            fmt: fmt,
+            file: file,
+            options: opts,
+            lossless: _lossless,
+          );
           lastOut = file.path;
           count++;
         }
@@ -282,51 +260,113 @@ class _ConverterScreenState extends State<ConverterScreen> {
 
   // ---- UI ----
 
+  Sidebar _sidebar() => Sidebar(
+        minWidth: 220,
+        builder: (context, scrollController) {
+          final store = _store;
+          if (store == null) return const SizedBox.shrink();
+          return SidebarContent(
+            store: store,
+            busy: _busy,
+            onApplyPreset: _applyPreset,
+            onDropOnPreset: _quickConvertWithPreset,
+            onSaveCurrentAsPreset: _saveCurrentAsPreset,
+            onOpenRecent: (e) => launchUrl(Uri.directory(e.outDir)),
+            onOpenSettings: () => showSettingsSheet(
+              context,
+              store,
+              onChanged: () {
+                if (mounted) {
+                  setState(() => _outDir = store.defaultOutDir ?? _outDir);
+                }
+              },
+            ),
+          );
+        },
+      );
+
+  ToolBar _toolBar() => ToolBar(
+        title: const Text('Alotno'),
+        titleWidth: 200,
+        actions: [
+          ToolBarIconButton(
+            label: 'Clear queue',
+            icon: const MacosIcon(CupertinoIcons.trash),
+            showLabel: false,
+            onPressed: _queue.isEmpty || _busy
+                ? null
+                : () => setState(() {
+                    _queue.clear();
+                    _status = 'Cleared.';
+                  }),
+          ),
+        ],
+      );
+
+  Widget _dropzoneSection() => Dropzone(
+        dragging: _dragging,
+        busy: _busy,
+        onTap: _pick,
+        onDragEntered: () => setState(() => _dragging = true),
+        onDragExited: () => setState(() => _dragging = false),
+        onDropPaths: (paths) {
+          setState(() => _dragging = false);
+          _addPaths(paths);
+        },
+      );
+
+  List<Widget> _queueSection() => [
+        const SizedBox(height: 16),
+        ..._queue.map((i) => QueueRow(
+              name: i.name,
+              width: i.w,
+              height: i.h,
+              bytes: i.bytes,
+              busy: _busy,
+              onRemove: () => setState(() => _queue.remove(i)),
+            )),
+      ];
+
+  Widget _optionsHeader() => Row(
+        children: [
+          const SectionLabel('Options'),
+          const Spacer(),
+          // Quiet, contextual reset — secondary by design.
+          MacosIconButton(
+            icon: const MacosIcon(CupertinoIcons.arrow_counterclockwise, size: 13),
+            padding: EdgeInsets.zero,
+            onPressed: _busy ? null : _resetOptions,
+          ),
+        ],
+      );
+
+  Widget _optionsSection() => OptionsPanel(
+        preset: _preset,
+        colorMode: _colorMode,
+        showLossless: _formats.contains('webp'),
+        lossless: _lossless,
+        busy: _busy,
+        onPreset: (v) => setState(() => _preset = v),
+        onColorMode: (v) => setState(() => _colorMode = v),
+        onLossless: (v) => setState(() => _lossless = v),
+      );
+
+  Widget _actionsSection() => ActionsBar(
+        canConvert: _queue.isNotEmpty && _formats.isNotEmpty && _outDir != null && !_busy,
+        busy: _busy,
+        queueCount: _queue.length,
+        showReveal: _outDir != null,
+        status: _status,
+        onConvert: _convert,
+        onReveal: _reveal,
+      );
+
   @override
   Widget build(BuildContext context) {
-    final canConvert = _queue.isNotEmpty && _formats.isNotEmpty && _outDir != null && !_busy;
-    final store = _store;
     return MacosWindow(
-      sidebar: Sidebar(
-        minWidth: 220,
-        builder: (context, scrollController) => store == null
-            ? const SizedBox.shrink()
-            : SidebarContent(
-                store: store,
-                busy: _busy,
-                onApplyPreset: _applyPreset,
-                onDropOnPreset: _quickConvertWithPreset,
-                onSaveCurrentAsPreset: _saveCurrentAsPreset,
-                onOpenRecent: (e) => launchUrl(Uri.directory(e.outDir)),
-                onOpenSettings: () => showSettingsSheet(
-                  context,
-                  store,
-                  onChanged: () {
-                    if (mounted) {
-                      setState(() => _outDir = store.defaultOutDir ?? _outDir);
-                    }
-                  },
-                ),
-              ),
-      ),
+      sidebar: _sidebar(),
       child: MacosScaffold(
-        toolBar: ToolBar(
-          title: const Text('Alotno'),
-          titleWidth: 200,
-          actions: [
-            ToolBarIconButton(
-              label: 'Clear queue',
-              icon: const MacosIcon(CupertinoIcons.trash),
-              showLabel: false,
-              onPressed: _queue.isEmpty || _busy
-                  ? null
-                  : () => setState(() {
-                      _queue.clear();
-                      _status = 'Cleared.';
-                    }),
-            ),
-          ],
-        ),
+        toolBar: _toolBar(),
         children: [
           ContentArea(
             builder: (context, controller) => SingleChildScrollView(
@@ -338,76 +378,27 @@ class _ConverterScreenState extends State<ConverterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Dropzone(
-                        dragging: _dragging,
-                        busy: _busy,
-                        onTap: _pick,
-                        onDragEntered: () => setState(() => _dragging = true),
-                        onDragExited: () => setState(() => _dragging = false),
-                        onDropPaths: (paths) {
-                          setState(() => _dragging = false);
-                          _addPaths(paths);
-                        },
-                      ),
-                      if (_queue.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        ..._queue.map((i) => QueueRow(
-                              name: i.name,
-                              width: i.w,
-                              height: i.h,
-                              bytes: i.bytes,
-                              busy: _busy,
-                              onRemove: () => setState(() => _queue.remove(i)),
-                            )),
-                      ],
+                      _dropzoneSection(),
+                      if (_queue.isNotEmpty) ..._queueSection(),
                       const SizedBox(height: 24),
                       const SectionLabel('Output formats'),
                       const SizedBox(height: 8),
                       FormatChips(
                         selected: _formats,
                         busy: _busy,
-                        onToggle: (f) => setState(() => _formats.contains(f) ? _formats.remove(f) : _formats.add(f)),
+                        onToggle: (f) => setState(
+                            () => _formats.contains(f) ? _formats.remove(f) : _formats.add(f)),
                       ),
                       const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          const SectionLabel('Options'),
-                          const Spacer(),
-                          // Quiet, contextual reset — secondary by design.
-                          MacosIconButton(
-                            icon: const MacosIcon(
-                                CupertinoIcons.arrow_counterclockwise,
-                                size: 13),
-                            padding: EdgeInsets.zero,
-                            onPressed: _busy ? null : _resetOptions,
-                          ),
-                        ],
-                      ),
+                      _optionsHeader(),
                       const SizedBox(height: 8),
-                      OptionsPanel(
-                        preset: _preset,
-                        colorMode: _colorMode,
-                        showLossless: _formats.contains('webp'),
-                        lossless: _lossless,
-                        busy: _busy,
-                        onPreset: (v) => setState(() => _preset = v),
-                        onColorMode: (v) => setState(() => _colorMode = v),
-                        onLossless: (v) => setState(() => _lossless = v),
-                      ),
+                      _optionsSection(),
                       const SizedBox(height: 20),
                       const SectionLabel('Save to'),
                       const SizedBox(height: 8),
                       OutputRow(outDir: _outDir, busy: _busy, onChoose: _pickOutDir),
                       const SizedBox(height: 24),
-                      ActionsBar(
-                        canConvert: canConvert,
-                        busy: _busy,
-                        queueCount: _queue.length,
-                        showReveal: _outDir != null,
-                        status: _status,
-                        onConvert: _convert,
-                        onReveal: _reveal,
-                      ),
+                      _actionsSection(),
                     ],
                   ),
                 ),
