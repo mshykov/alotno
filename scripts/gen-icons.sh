@@ -28,8 +28,9 @@ echo "▸ Building 2048² master…"
 rsvg-convert -w 2048 -h 2048 "$SRC" -o "$TMP/master.png"
 
 emit() { # emit <dest.png> <pixels>
-  sips -z "$2" "$2" "$TMP/master.png" --out "$1" >/dev/null
-  echo "  $1 (${2}px)"
+  local dest="$1" px="$2"
+  sips -z "$px" "$px" "$TMP/master.png" --out "$dest" >/dev/null
+  echo "  $dest (${px}px)"
 }
 
 # --- 2. macOS appiconset ---------------------------------------------------------

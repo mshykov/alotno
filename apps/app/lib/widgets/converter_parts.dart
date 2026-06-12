@@ -291,6 +291,7 @@ class ActionsBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = AppPalette.of(context).accent;
     final muted = AppPalette.of(context).muted;
+    final idleLabel = queueCount <= 1 ? 'Convert' : 'Convert $queueCount files';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -310,7 +311,7 @@ class ActionsBar extends StatelessWidget {
                           Text('Converting…'),
                         ],
                       )
-                    : Text(queueCount <= 1 ? 'Convert' : 'Convert $queueCount files'),
+                    : Text(idleLabel),
               ),
             ),
             if (showReveal) ...[

@@ -140,13 +140,7 @@ class _MobileConverterPageState extends State<MobileConverterPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final canConvert = _queue.isNotEmpty && _formats.isNotEmpty && !_busy;
-
-    return Scaffold(
-      appBar: AppBar(
+  PreferredSizeWidget _appBar() => AppBar(
         title: const Text('Alotno'),
         centerTitle: false,
         actions: [
@@ -163,144 +157,156 @@ class _MobileConverterPageState extends State<MobileConverterPage> {
                       }),
             ),
         ],
+      );
+
+  Widget _pickCard(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _busy ? null : _pick,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.add_photo_alternate_outlined, size: 40, color: cs.primary),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  _queue.isEmpty ? 'Choose PNGs…' : 'Add more PNGs…',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+
+  List<Widget> _queueSection() => [
+        const SizedBox(height: 12),
+        ..._queue.map(
+          (item) => ListTile(
+            key: ValueKey(item.path),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(item.preview,
+                  width: 44, height: 44, fit: BoxFit.cover, cacheWidth: 88),
+            ),
+            title: Text(item.name, overflow: TextOverflow.ellipsis),
+            subtitle: Text(humanSize(item.preview.length)),
+            trailing: IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: _busy ? null : () => setState(() => _queue.remove(item)),
+            ),
+          ),
+        ),
+      ];
+
+  Widget _formatsSection() => Wrap(
+        spacing: 8,
+        children: allFormats.map((f) {
+          return FilterChip(
+            label: Text(f.toUpperCase()),
+            selected: _formats.contains(f),
+            onSelected: _busy
+                ? null
+                : (sel) => setState(() => sel ? _formats.add(f) : _formats.remove(f)),
+          );
+        }).toList(),
+      );
+
+  Widget _optionsSection() => Wrap(
+        spacing: 16,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          DropdownMenu<String>(
+            initialSelection: _preset,
+            label: const Text('Detail'),
+            enabled: !_busy,
+            onSelected: (v) => setState(() => _preset = v ?? _preset),
+            dropdownMenuEntries: const [
+              DropdownMenuEntry(value: 'low', label: 'Coarse'),
+              DropdownMenuEntry(value: 'medium', label: 'Medium'),
+              DropdownMenuEntry(value: 'high', label: 'Fine'),
+              DropdownMenuEntry(value: 'ultra', label: 'Super fine'),
+            ],
+          ),
+          DropdownMenu<String>(
+            initialSelection: _colorMode,
+            label: const Text('Color'),
+            enabled: !_busy,
+            onSelected: (v) => setState(() => _colorMode = v ?? _colorMode),
+            dropdownMenuEntries: const [
+              DropdownMenuEntry(value: 'mono', label: 'Mono'),
+              DropdownMenuEntry(value: 'posterized', label: 'Color'),
+            ],
+          ),
+          if (_formats.contains('webp'))
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Adaptive: Cupertino-style switch on iOS, Material elsewhere.
+                Switch.adaptive(
+                    value: _lossless,
+                    onChanged: _busy ? null : (v) => setState(() => _lossless = v)),
+                const Text('Lossless WebP'),
+              ],
+            ),
+        ],
+      );
+
+  Widget _convertButton() {
+    final canConvert = _queue.isNotEmpty && _formats.isNotEmpty && !_busy;
+    final multiLabel =
+        _queue.length > 1 ? 'Convert & Share ${_queue.length} files' : 'Convert & Share';
+    return FilledButton.icon(
+      onPressed: canConvert ? _convert : null,
+      icon: _busy
+          ? const SizedBox(
+              width: 18, height: 18, child: CircularProgressIndicator.adaptive(strokeWidth: 2))
+          : const Icon(Icons.ios_share),
+      label: Text(_busy ? 'Converting…' : multiLabel),
+      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+    );
+  }
+
+  List<Widget> _savePhotosSection() => [
+        const SizedBox(height: 8),
+        FilledButton.tonalIcon(
+          onPressed: _busy ? null : _saveWebpToPhotos,
+          icon: const Icon(Icons.photo_library_outlined),
+          label: Text('Save ${_webpOutputs.length} WebP to Photos'),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        ),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: _appBar(),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // ---- Pick card ----
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: _busy ? null : _pick,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Icon(Icons.add_photo_alternate_outlined, size: 40, color: cs.primary),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          _queue.isEmpty ? 'Choose PNGs…' : 'Add more PNGs…',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // ---- Queue ----
-            if (_queue.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ..._queue.map(
-                (item) => ListTile(
-                  key: ValueKey(item.path),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(item.preview,
-                        width: 44, height: 44, fit: BoxFit.cover, cacheWidth: 88),
-                  ),
-                  title: Text(item.name, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(humanSize(item.preview.length)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed:
-                        _busy ? null : () => setState(() => _queue.remove(item)),
-                  ),
-                ),
-              ),
-            ],
+            _pickCard(context),
+            if (_queue.isNotEmpty) ..._queueSection(),
             const SizedBox(height: 20),
-
-            // ---- Formats ----
             Text('Output formats', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: allFormats.map((f) {
-                return FilterChip(
-                  label: Text(f.toUpperCase()),
-                  selected: _formats.contains(f),
-                  onSelected: _busy
-                      ? null
-                      : (sel) => setState(() => sel ? _formats.add(f) : _formats.remove(f)),
-                );
-              }).toList(),
-            ),
+            _formatsSection(),
             const SizedBox(height: 20),
-
-            // ---- Options ----
             Text('Options', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 16,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                DropdownMenu<String>(
-                  initialSelection: _preset,
-                  label: const Text('Detail'),
-                  enabled: !_busy,
-                  onSelected: (v) => setState(() => _preset = v ?? _preset),
-                  dropdownMenuEntries: const [
-                    DropdownMenuEntry(value: 'low', label: 'Coarse'),
-                    DropdownMenuEntry(value: 'medium', label: 'Medium'),
-                    DropdownMenuEntry(value: 'high', label: 'Fine'),
-                    DropdownMenuEntry(value: 'ultra', label: 'Super fine'),
-                  ],
-                ),
-                DropdownMenu<String>(
-                  initialSelection: _colorMode,
-                  label: const Text('Color'),
-                  enabled: !_busy,
-                  onSelected: (v) => setState(() => _colorMode = v ?? _colorMode),
-                  dropdownMenuEntries: const [
-                    DropdownMenuEntry(value: 'mono', label: 'Mono'),
-                    DropdownMenuEntry(value: 'posterized', label: 'Color'),
-                  ],
-                ),
-                if (_formats.contains('webp'))
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Adaptive: Cupertino-style switch on iOS, Material elsewhere.
-                      Switch.adaptive(
-                          value: _lossless,
-                          onChanged: _busy ? null : (v) => setState(() => _lossless = v)),
-                      const Text('Lossless WebP'),
-                    ],
-                  ),
-              ],
-            ),
+            _optionsSection(),
             const SizedBox(height: 28),
-
-            // ---- Convert ----
-            FilledButton.icon(
-              onPressed: canConvert ? _convert : null,
-              icon: _busy
-                  ? const SizedBox(
-                      width: 18, height: 18, child: CircularProgressIndicator.adaptive(strokeWidth: 2))
-                  : const Icon(Icons.ios_share),
-              label: Text(_busy
-                  ? 'Converting…'
-                  : _queue.length > 1
-                      ? 'Convert & Share ${_queue.length} files'
-                      : 'Convert & Share'),
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-            ),
-            if (_webpOutputs.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              FilledButton.tonalIcon(
-                onPressed: _busy ? null : _saveWebpToPhotos,
-                icon: const Icon(Icons.photo_library_outlined),
-                label: Text('Save ${_webpOutputs.length} WebP to Photos'),
-                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              ),
-            ],
+            _convertButton(),
+            if (_webpOutputs.isNotEmpty) ..._savePhotosSection(),
             const SizedBox(height: 12),
             Text(_status, textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant)),
           ],

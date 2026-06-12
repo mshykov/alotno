@@ -35,23 +35,7 @@ pub(crate) fn from_svg(svg: &str) -> Result<String, ConvertError> {
             Some(d) => d,
             None => continue,
         };
-        let fill = attr_str(&attrs, "fill");
-        let stroke = attr_str(&attrs, "stroke");
-        let stroke_width = attr_str(&attrs, "stroke-width")
-            .and_then(|s| s.parse::<f64>().ok())
-            .unwrap_or(1.0);
-
-        // SVG's default fill is black; `fill="none"` disables it. An unparseable
-        // color falls back to black rather than silently dropping the shape.
-        let fill_rgb = match fill.as_deref() {
-            Some(f) if !is_paint(f) => None,
-            Some(f) => Some(hex_to_rgb(f).unwrap_or((0.0, 0.0, 0.0))),
-            None => Some((0.0, 0.0, 0.0)),
-        };
-        let stroke_rgb = stroke
-            .as_deref()
-            .filter(|s| is_paint(s))
-            .and_then(hex_to_rgb);
+        let (fill_rgb, stroke_rgb) = resolve_paints(&attrs);
 
         // Nothing to paint → don't leave a dangling path in the PS graphics state.
         if fill_rgb.is_none() && stroke_rgb.is_none() {
@@ -59,25 +43,7 @@ pub(crate) fn from_svg(svg: &str) -> Result<String, ConvertError> {
         }
 
         emit_path(&mut ps, &d, h);
-
-        if let Some(rgb) = fill_rgb {
-            ps.push_str(&format!(
-                "{:.3} {:.3} {:.3} setrgbcolor\n",
-                rgb.0, rgb.1, rgb.2
-            ));
-            ps.push_str(if stroke_rgb.is_some() {
-                "gsave fill grestore\n"
-            } else {
-                "fill\n"
-            });
-        }
-        if let Some(rgb) = stroke_rgb {
-            ps.push_str(&format!(
-                "{:.3} {:.3} {:.3} setrgbcolor\n",
-                rgb.0, rgb.1, rgb.2
-            ));
-            ps.push_str(&format!("{stroke_width} setlinewidth\nstroke\n"));
-        }
+        emit_paint(&mut ps, &attrs, fill_rgb, stroke_rgb);
     }
 
     ps.push_str("grestore\n%%EOF\n");
@@ -111,6 +77,50 @@ fn emit_path(ps: &mut String, d: &str, height: f64) {
             )),
             PathCmd::Close => ps.push_str("closepath\n"),
         }
+    }
+}
+
+type Rgb = (f64, f64, f64);
+
+/// Resolve a path's fill/stroke paints from its attributes. SVG's default fill
+/// is black; `fill="none"` disables it; an unparseable fill falls back to black
+/// rather than silently dropping the shape.
+fn resolve_paints(attrs: &str) -> (Option<Rgb>, Option<Rgb>) {
+    let fill = attr_str(attrs, "fill");
+    let fill_rgb = match fill.as_deref() {
+        Some(f) if !is_paint(f) => None,
+        Some(f) => Some(hex_to_rgb(f).unwrap_or((0.0, 0.0, 0.0))),
+        None => Some((0.0, 0.0, 0.0)),
+    };
+    let stroke_rgb = attr_str(attrs, "stroke")
+        .as_deref()
+        .filter(|s| is_paint(s))
+        .and_then(hex_to_rgb);
+    (fill_rgb, stroke_rgb)
+}
+
+/// Emit the fill/stroke operators for an already-emitted path.
+fn emit_paint(ps: &mut String, attrs: &str, fill_rgb: Option<Rgb>, stroke_rgb: Option<Rgb>) {
+    if let Some(rgb) = fill_rgb {
+        ps.push_str(&format!(
+            "{:.3} {:.3} {:.3} setrgbcolor\n",
+            rgb.0, rgb.1, rgb.2
+        ));
+        ps.push_str(if stroke_rgb.is_some() {
+            "gsave fill grestore\n"
+        } else {
+            "fill\n"
+        });
+    }
+    if let Some(rgb) = stroke_rgb {
+        let stroke_width = attr_str(attrs, "stroke-width")
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(1.0);
+        ps.push_str(&format!(
+            "{:.3} {:.3} {:.3} setrgbcolor\n",
+            rgb.0, rgb.1, rgb.2
+        ));
+        ps.push_str(&format!("{stroke_width} setlinewidth\nstroke\n"));
     }
 }
 
