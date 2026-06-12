@@ -66,6 +66,43 @@ void main() {
     expect(settingsOpened, 1);
   });
 
+  testWidgets('save-preset sheet captures a name', (tester) async {
+    String? savedName;
+    final store = _storeWith();
+
+    await tester.pumpWidget(MacosApp(
+      home: SizedBox(
+        width: 240,
+        child: SidebarContent(
+          store: store,
+          busy: false,
+          onApplyPreset: (_) {},
+          onDropOnPreset: (_, _) {},
+          onSaveCurrentAsPreset: (n) => savedName = n,
+          onOpenRecent: (_) {},
+          onOpenSettings: () {},
+        ),
+      ),
+    ));
+
+    // The ＋ next to PRESETS opens the name sheet.
+    await tester.tap(find.byType(MacosIconButton).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Save current settings as a preset'), findsOneWidget);
+
+    await tester.enterText(find.byType(MacosTextField), 'My preset');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(savedName, 'My preset');
+
+    // Cancel path: open again and dismiss without saving.
+    await tester.tap(find.byType(MacosIconButton).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Save current settings as a preset'), findsNothing);
+  });
+
   testWidgets('settings sheet shows default folder + clears recents', (tester) async {
     final store = _storeWith(recents: [
       RecentEntry(

@@ -3,8 +3,8 @@
 //! (group-by-color, clip, fixed size, versions, draw styles).
 
 use alotno_core::{
-    png_to_svg, png_to_webp, ColorMode, DrawStyle, GroupBy, Preset, StrokeStyle, SvgOptions,
-    SvgVersion, WebpOptions,
+    png_dimensions, png_to_dxf, png_to_eps, png_to_pdf, png_to_svg, png_to_webp, ColorMode,
+    DrawStyle, GroupBy, Preset, StrokeStyle, SvgOptions, SvgVersion, WebpOptions,
 };
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, ImageEncoder};
@@ -61,6 +61,27 @@ fn webp_lossless_lossy_and_grayscale_all_encode() {
     assert!(gray.starts_with(b"RIFF"));
     // Grayscale output differs from the color encode of the same image.
     assert_ne!(gray, lossless);
+}
+
+#[test]
+fn pdf_eps_dxf_and_dimensions_from_one_png() {
+    let png = two_tone_png(32, 16);
+    let opts = SvgOptions::default();
+
+    // The PDF path was previously completely untested.
+    let pdf = png_to_pdf(&png, &opts).unwrap();
+    assert!(pdf.starts_with(b"%PDF"), "not a PDF header");
+    assert!(pdf.len() > 100);
+
+    let eps = png_to_eps(&png, &opts).unwrap();
+    assert!(eps.starts_with("%!PS-Adobe-3.0 EPSF-3.0"));
+
+    let dxf = png_to_dxf(&png, &opts).unwrap();
+    assert!(dxf.contains("ENTITIES"));
+    assert!(dxf.ends_with("EOF\n"));
+
+    assert_eq!(png_dimensions(&png).unwrap(), (32, 16));
+    assert!(png_dimensions(b"not a png").is_err());
 }
 
 #[test]
