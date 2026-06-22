@@ -40,7 +40,7 @@ dependencies:
   file_picker: ^11.0.2
   macos_ui: ^2.2.2
   desktop_drop: ^0.7.1
-  tray_manager: ^0.5.2
+  tray_manager: ^0.5.3
   window_manager: ^0.5.1
   # Cross-platform path joining/basename (no hardcoded POSIX separators).
   path: ^1.9.0
@@ -50,7 +50,7 @@ dependencies:
   # Mobile output: phones have no chosen output folder, so we convert into a temp
   # dir and hand the files to the native share sheet.
   share_plus: ^10.1.4
-  path_provider: ^2.1.5
+  path_provider: ^2.1.6
   # "Save WebP to Photos" on mobile (Photos can't take SVG/PDF/EPS/DXF).
   gal: ^2.3.0
 
