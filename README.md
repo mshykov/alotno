@@ -54,7 +54,7 @@ Technical docs:
 - [Running locally](docs/running.md) — build & dev setup
 - [Releasing (macOS)](docs/releasing-macos.md) — sign + notarize + DMG
 - [Roadmap](docs/roadmap.md)
-- [Design system](DESIGN.md) · [design tokens](design/README.md)
+- [Design system](docs/design.md) · [design tokens](design/README.md)
 
 ## License
 
