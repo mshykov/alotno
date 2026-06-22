@@ -55,7 +55,7 @@ class Tokens {
 class TokensDark {
   static const colorBrand500 = Color(0xFF818CF8);
   static const colorBrand600 = Color(0xFF6366F1);
-  static const colorBrand700 = Color(0xFF4338CA);
+  static const colorBrand700 = Color(0xFF4F46E5);
   static const colorBrandSoft = Color(0xFF1E1B4B);
   static const colorNeutral0 = Color(0xFF0B1120);
   static const colorNeutral50 = Color(0xFF0F172A);
@@ -69,7 +69,7 @@ class TokensDark {
   static const colorSurfaceElevated = Color(0xFF111827);
   static const colorInkBase = Color(0xFFE2E8F0);
   static const colorInkMuted = Color(0xFF94A3B8);
-  static const colorInkSubtle = Color(0xFF64748B);
+  static const colorInkSubtle = Color(0xFF94A3B8);
   static const colorInkFaint = Color(0xFF334155);
   static const colorOutlineBase = Color(0xFF1E293B);
   static const colorOutlineStrong = Color(0xFF334155);
