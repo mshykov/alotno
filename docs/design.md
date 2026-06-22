@@ -1,3 +1,5 @@
+> Baseline: `MSH/docs/design.md` (org common rules). Below: Alotno-specific rules.
+
 # Alotno
 
 ## Overview
