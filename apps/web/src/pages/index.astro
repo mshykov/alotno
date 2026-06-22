@@ -143,11 +143,12 @@ const jsonLd = {
         color: var(--color-ink-base);
         -webkit-font-smoothing: antialiased;
       }
-      a { color: var(--color-brand-500); text-decoration: none; }
-      a:hover { text-decoration: underline; }
-      /* Links inside prose must not rely on color alone (WCAG 1.4.1) — underline
-         them. Nav links and the .dl button chip are distinguished by layout. */
-      .foot a, .sub a { text-decoration: underline; }
+      /* Prose links are underlined by default so they never rely on color alone
+         (WCAG 1.4.1). Opt out only for chrome distinguished by layout: the nav,
+         the brand mark, and the .dl button chip. */
+      a { color: var(--color-brand-500); text-decoration: underline; }
+      .brand, .navlinks a, .dl { text-decoration: none; }
+      .navlinks a:hover { text-decoration: underline; }
 
       .top { display: flex; align-items: center; justify-content: space-between; max-width: 720px; margin: 0 auto; padding: var(--space-5) var(--space-6); }
       .brand { display: flex; align-items: center; gap: var(--space-2); color: var(--color-ink-base); font-weight: var(--font-weight-bold); }
