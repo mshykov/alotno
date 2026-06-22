@@ -2,7 +2,7 @@
   "name": "alotno",
   "version": "0.1.0",
   "private": true,
-  "description": "One Rust engine, every platform: PNG → SVG / PDF / EPS / DXF / WebP.",
+  "description": "One Rust engine, every platform: PNG \u2192 SVG / PDF / EPS / DXF / WebP.",
   "license": "AGPL-3.0-or-later",
   "author": "Maksym Shykov",
   "repository": "https://github.com/mshykov/alotno",
@@ -11,6 +11,7 @@
     "tokens": "pnpm --filter @alotno/design build",
     "wasm": "wasm-pack build bindings/wasm --target web --out-dir pkg --release",
     "dev": "pnpm --filter @alotno/web dev",
-    "build": "pnpm tokens && pnpm --filter @alotno/web build"
+    "build": "pnpm tokens && pnpm --filter @alotno/web build",
+    "test": "pnpm --filter @alotno/design test && pnpm --filter @alotno/web test"
   }
 }
