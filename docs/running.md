@@ -85,12 +85,3 @@ wasm-pack build bindings/wasm --target web --out-dir pkg --release
 pnpm --filter @alotno/web build      # outputs apps/web/dist/
 pnpm --filter @alotno/web preview    # serve the built site locally
 ```
-
----
-
-## Legacy Electron prototype (reference only)
-
-```sh
-cd legacy/electron-mac && npm install && npm start
-```
-Not part of the new build; kept for reference until the Flutter app reaches parity.

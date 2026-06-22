@@ -26,7 +26,6 @@ Everything in `apps/` is a thin shell around those two.
 | [`apps/web/`](../apps/web) | Marketing page + in-browser converter | Astro |
 | [`apps/app/`](../apps/app) | The cross-platform app (all 6 targets) | Flutter |
 | [`docs/`](.) | Architecture, features, running, releasing, roadmap | Markdown |
-| [`legacy/`](../legacy) | The original Electron Mac prototype, kept for reference | Electron |
 
 ## Layer 1 — the engine (`core/`)
 
