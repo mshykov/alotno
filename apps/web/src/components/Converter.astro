@@ -120,13 +120,15 @@
     border: 1px solid var(--color-outline-base); background: var(--color-surface-base); color: var(--color-ink-muted);
     transition: all 0.1s ease;
   }
-  .chip.on { background: var(--color-brand-500); border-color: var(--color-brand-500); color: #fff; }
+  /* brand-700 (not 500) so white text clears 4.5:1 in dark mode too. */
+  .chip.on { background: var(--color-brand-700); border-color: var(--color-brand-700); color: #fff; }
   .opts { display: flex; flex-wrap: wrap; gap: var(--space-5); align-items: end; }
   .opt { display: block; }
   select { font: inherit; font-size: var(--font-size-sm); padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-outline-base); background: var(--color-surface-base); color: var(--color-ink-base); }
   .seg { display: inline-flex; border: 1px solid var(--color-outline-base); border-radius: var(--radius-sm); overflow: hidden; }
   .seg button { font: inherit; font-size: var(--font-size-sm); padding: 6px 14px; border: 0; background: var(--color-surface-base); color: var(--color-ink-muted); cursor: pointer; }
-  .seg button.on { background: var(--color-brand-soft); color: var(--color-brand-600); font-weight: var(--font-weight-medium); }
+  /* brand-500 text (not 600) for ≥4.5:1 on the dark brand-soft fill. */
+  .seg button.on { background: var(--color-brand-soft); color: var(--color-brand-500); font-weight: var(--font-weight-medium); }
   .check { display: flex; align-items: center; gap: var(--space-2); color: var(--color-ink-muted); font-size: var(--font-size-sm); }
   .check input { accent-color: var(--color-brand-500); }
 
@@ -134,7 +136,7 @@
   .btn-primary {
     font: inherit; font-weight: var(--font-weight-semibold); font-size: var(--font-size-md);
     padding: 11px 22px; border: 0; border-radius: var(--radius-sm); cursor: pointer;
-    background: var(--color-brand-500); color: #fff; flex: 1; transition: background 0.1s ease;
+    background: var(--color-brand-700); color: #fff; flex: 1; transition: background 0.1s ease;
   }
   .btn-primary:hover:not(:disabled) { background: var(--color-brand-600); }
   .btn-primary:disabled { background: var(--color-outline-base); color: var(--color-ink-subtle); cursor: default; }
