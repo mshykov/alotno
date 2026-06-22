@@ -175,6 +175,10 @@ jobs:
             diff design/dist/tokens.dart apps/app/lib/design/tokens.dart || true
             exit 1
           fi
+      - name: Unit tests (token lib + conversion-dispatch core)
+        run: |
+          pnpm --filter @alotno/design test
+          pnpm --filter @alotno/web test
       - name: Type-check (astro check)
         run: pnpm --filter @alotno/web check
       - name: Build site
