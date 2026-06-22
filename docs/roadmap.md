@@ -3,28 +3,38 @@
 Sequenced by *learning and leverage*, not by platform count. Each phase ends with
 something shippable and demoable.
 
-## Phase 0 — Foundation ✅ (this commit)
-- Monorepo skeleton, Rust core API, WASM + FFI binding stubs, design-token
-  pipeline, docs. Toolchains documented, not yet all installed.
+## Phase 0 — Foundation ✅
+Monorepo skeleton, Rust core API, WASM + FFI bindings, design-token pipeline, docs.
 
-## Phase 1 — Web (the wedge)
+## Phase 1 — Web (the wedge) ✅
 The lowest-friction surface: no install, no Apple tax, validates the engine.
-- [ ] Install Rust + `wasm-pack`; `cargo test` the core; build the WASM pkg.
-- [ ] Astro marketing page at **alotno.app** using the design tokens.
-- [ ] In-browser converter: drag PNG → SVG / PDF / WebP (all via the WASM core), download result.
-- [ ] Deploy (Cloudflare Pages — same vendor as the domain).
+- [x] Rust core + `wasm-pack` build; `cargo test` the core.
+- [x] Astro marketing page at **alotno.app** built from the design tokens.
+- [x] In-browser converter: drag PNG → SVG / PDF / EPS / DXF / WebP via the WASM
+  core (conversion runs in a Web Worker), download result.
+- [x] Deployed to Cloudflare Pages.
 
-## Phase 2 — Desktop (macOS first)
+## Phase 2 — Desktop (macOS) ✅
 The Flutter app, reusing the same core via FFI.
-- [ ] Install Flutter; `flutter create apps/app` for desktop targets.
-- [ ] Wire `flutter_rust_bridge`; call `trace_png_to_svg` / `convert_png_to_webp`.
-- [ ] Build the UI from `tokens.dart` to match the web app.
-- [ ] Sign + notarize for macOS (Developer ID), then enable Windows + Linux.
-- [ ] Retire `legacy/electron-mac` once parity is reached.
+- [x] Flutter desktop; `flutter_rust_bridge` wired to the core.
+- [x] macos_ui shell built from `tokens.dart`; sidebar with presets/recents/settings.
+- [x] Menu-bar quick-convert; signed + notarized DMG (Developer ID); auto-release.
 
-## Phase 3 — Mobile
-- [ ] Enable iOS + Android targets on the *same* Flutter project.
-- [ ] Platform file-picker / share-sheet integration; the engine is unchanged.
+## Phase 3 — Mobile (iOS) ✅
+- [x] iOS target on the same Flutter project; shared Material UI.
+- [x] "Open with Alotno" intake (Files), multi-file queue, Save-to-Photos (WebP),
+  share-sheet output, light Cupertino touches.
+
+## In progress / next
+
+### Distribution
+- [ ] **TestFlight** (iOS) — needs an App Store Connect record + distribution cert.
+- [ ] **Google Play** (Android) — needs the Android SDK/NDK toolchain + Play account.
+- [ ] **Windows + Linux desktop** — scaffolding exists; not yet built/tested.
+
+### iOS Share Extension
+- [ ] Appear in the Photos/share-sheet row (needs an Xcode target + App Group);
+  today intake is via the Files "Open in" document-type registration.
 
 ## Deferred / known limitations
 
@@ -44,6 +54,11 @@ Closing the gap needs one of:
 
 Deferred until web lossy parity is a real need; lossless WebP (which the browser
 `canvas.toBlob` cannot produce) already ships on the web.
+
+### Android build verification
+Android intake/config code is committed but **build-unverified** — no Android
+SDK/NDK in the dev or CI environment yet. CI builds macOS + iOS (simulator); the
+native macOS app build is the regression gate for the app layer.
 
 ## Guardrails
 - New conversion behavior goes in `core/` only — never reimplemented in an app.

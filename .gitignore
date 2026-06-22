@@ -51,3 +51,6 @@ design/dist/
 # Local secrets — never commit (org convention + underscore variant)
 _do-not-commit/
 _do_not_commit/
+
+# Xcode SwiftPM workspace state (generated)
+**/xcshareddata/swiftpm/
