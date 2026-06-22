@@ -67,6 +67,38 @@ jobs:
         run: flutter test
         working-directory: apps/app
 
+  # ---- Native app build: compile the macOS + iOS shells ----
+  # `flutter analyze`/`test` never compile the native app, so Swift/Podfile/
+  # plugin-integration breakage (e.g. a missing `override`, a deployment-target
+  # bump) would ship undetected. This job is the app-layer regression gate.
+  # Android stays out until the SDK/NDK toolchain is wired (see docs/roadmap.md).
+  native-build:
+    name: Native app build (macOS + iOS sim)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      # cargokit invokes cargo during the Flutter build; ensure a toolchain.
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: apps/app/rust
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.44.1
+          channel: stable
+          cache: true
+      - name: Pub get
+        run: flutter pub get --enforce-lockfile
+        working-directory: apps/app
+      - name: Build macOS (debug)
+        run: flutter build macos --debug
+        working-directory: apps/app
+      - name: Build iOS (simulator, debug, unsigned)
+        run: flutter build ios --simulator --debug
+        working-directory: apps/app
+
   # ---- SonarCloud: CI-based scan (Automatic Analysis is off) ----
   # Respects sonar-project.properties (exclusions, project key) — which the
   # automatic mode ignored. Decorates PRs; not a required merge check.
