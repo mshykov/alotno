@@ -14,6 +14,9 @@ build/
 # ---- WASM build output ----
 bindings/wasm/pkg/
 
+# ---- Cloudflare Wrangler (local state) ----
+.wrangler/
+
 # ---- Node / JS ----
 node_modules/
 .pnpm-store/
