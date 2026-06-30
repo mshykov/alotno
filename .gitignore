@@ -57,3 +57,26 @@ _do_not_commit/
 
 # Xcode SwiftPM workspace state (generated)
 **/xcshareddata/swiftpm/
+
+# ---- AI coding assistant local artifacts (per-developer, never committed) ----
+# .claude/ is intentionally NOT ignored — its skills/ are project config.
+AGENTS.md
+.antigravitycli/
+.antigravity/
+.codex/
+.openai/
+.openAI/
+.aider*
+.continue/
+.windsurf/
+.windsurfrules
+.gemini/
+.copilot/
+.github/copilot-instructions.md
+.cline/
+.clinerules
+.roo/
+.qodo/
+.tabnine/
+.sourcegraph/
+.cody/
