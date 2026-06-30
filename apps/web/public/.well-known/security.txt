@@ -1,0 +1,4 @@
+Contact: mailto:security@alotno.app
+Expires: 2027-06-30T00:00:00Z
+Preferred-Languages: en
+Canonical: https://alotno.app/.well-known/security.txt
