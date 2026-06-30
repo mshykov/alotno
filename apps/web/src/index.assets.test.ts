@@ -1,10 +1,7 @@
-import { existsSync, statSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import optimizedIconUrl from "../public/icon-208.png?url";
+import originalIconUrl from "../public/icon.png?url";
 import source from "./pages/index.astro?raw";
-
-const publicDir = resolve(dirname(fileURLToPath(import.meta.url)), "../public");
 
 describe("home page visible icon assets", () => {
   it("uses the optimized 208px PNG for visible page icons", () => {
@@ -12,14 +9,12 @@ describe("home page visible icon assets", () => {
     expect(source).toContain(
       '<img class="logo" src="/icon-208.png" width="104" height="104" alt="Alotno — PNG to vector converter" />',
     );
+    expect(source).not.toContain('src="/icon.png"');
   });
 
-  it("ships an optimized visible icon asset", () => {
-    const optimizedIcon = resolve(publicDir, "icon-208.png");
-
-    expect(existsSync(optimizedIcon)).toBe(true);
-    if (!existsSync(optimizedIcon)) return;
-
-    expect(statSync(optimizedIcon).size).toBeLessThan(statSync(resolve(publicDir, "icon.png")).size);
+  it("ships a dedicated optimized visible icon asset", () => {
+    expect(optimizedIconUrl).toContain("icon-208.png");
+    expect(originalIconUrl).toContain("icon.png");
+    expect(optimizedIconUrl).not.toBe(originalIconUrl);
   });
 });
