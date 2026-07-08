@@ -1,0 +1,25 @@
+# cargo-deny configuration — advisory (RUSTSEC) scanning for the Rust workspace.
+# CI runs `cargo deny check advisories` so any NEW vulnerability or newly
+# unmaintained crate fails the build.
+#
+# Policy: real *vulnerabilities* are never ignored here — they get fixed. (E.g.
+# the crossbeam-epoch pointer-deref vuln RUSTSEC-2026-0204 was resolved by
+# bumping it to 0.9.20 in Cargo.lock, not by an ignore.) Every entry below is an
+# *unmaintained*-class advisory on a transitive, non-runtime dependency whose
+# provenance was verified with `cargo tree -i`. Three of the four disappear once
+# the vtracer CLI dep chain is replaced by direct visioncortex use.
+
+[advisories]
+version = 2
+ignore = [
+  # ansi_term + atty: vtracer 0.6.5 → clap 2.34 (its CLI arg parser). We call
+  # vtracer as a library (convert()), never its CLI — dead code in our builds.
+  { id = "RUSTSEC-2021-0139", reason = "ansi_term unmaintained; via vtracer->clap2 CLI, unused" },
+  { id = "RUSTSEC-2024-0375", reason = "atty unmaintained; via vtracer->clap2 CLI, unused" },
+  # adler: vtracer 0.6.5 → image 0.23 → tiff → miniz_oxide 0.4. We decode PNG
+  # only (never tiff), and adler is superseded by adler2. Not a vuln.
+  { id = "RUSTSEC-2025-0056", reason = "adler unmaintained; via vtracer->image0.23->tiff decode, unused" },
+  # ttf-parser: svg2pdf → fontdb/usvg/resvg font handling. Traced SVGs are
+  # path-only (no <text>), so the font-parsing path is never exercised. Not a vuln.
+  { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; via svg2pdf->resvg font path, unused (no text in traced SVG)" },
+]

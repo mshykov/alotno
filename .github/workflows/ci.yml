@@ -25,6 +25,15 @@ jobs:
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - name: Test (incl. parser fuzz/proptests)
         run: cargo test --workspace --all-features
+      # Fail on any new RUSTSEC vulnerability or unmaintained crate in the
+      # workspace lockfile. Accepted transitive advisories are documented in
+      # deny.toml.
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@0631aa6515c7d545823c67cfae7ef4fc7f490154 # v2
+        with:
+          tool: cargo-deny
+      - name: Advisory scan (RUSTSEC)
+        run: cargo deny check advisories
       - name: Native FFI crate (apps/app/rust) builds + tests
         # Separate Cargo workspace (cargokit builds it per target). Not linted
         # with -D warnings here because it includes frb-generated code.
