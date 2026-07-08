@@ -274,7 +274,16 @@ impl From<OptionsDto> for SvgOptions {
             group_by: GroupBy::parse(&o.group_by),
             stroke: StrokeStyle {
                 color: stroke_color,
-                width: o.stroke_width,
+                // Sanitize the caller-supplied width at the boundary: a
+                // NaN/inf/≤0 value from JS or FFI would otherwise be written
+                // verbatim as `stroke-width="NaN"` into the output SVG (and on
+                // into PDF/EPS/DXF), silently corrupting it instead of failing.
+                // Fall back to 1.0.
+                width: if o.stroke_width.is_finite() && o.stroke_width > 0.0 {
+                    o.stroke_width
+                } else {
+                    1.0
+                },
                 non_scaling: o.non_scaling_stroke,
             },
             fixed_size: o.fixed_size,
@@ -351,3 +360,33 @@ impl core::fmt::Display for ConvertError {
 }
 
 impl std::error::Error for ConvertError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn non_finite_or_nonpositive_stroke_width_falls_back_to_1() {
+        for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, -1.0, 0.0] {
+            let dto = OptionsDto {
+                stroke_width: bad,
+                ..OptionsDto::default()
+            };
+            let opts: SvgOptions = dto.into();
+            assert_eq!(
+                opts.stroke.width, 1.0,
+                "width {bad} should fall back to 1.0"
+            );
+        }
+    }
+
+    #[test]
+    fn valid_stroke_width_is_preserved() {
+        let dto = OptionsDto {
+            stroke_width: 2.5,
+            ..OptionsDto::default()
+        };
+        let opts: SvgOptions = dto.into();
+        assert_eq!(opts.stroke.width, 2.5);
+    }
+}

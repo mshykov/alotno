@@ -3,14 +3,19 @@
 //! attributes, and flattening curves to polylines.
 
 /// Split a path `d` string into command letters and numeric tokens.
-pub(crate) fn tokenize(d: &str) -> Vec<String> {
+///
+/// Tokens **borrow** from `d` (no per-token allocation): a hostile multi-MB `d`
+/// passed to the public `svg_to_*` string APIs would otherwise amplify ~10× into
+/// millions of tiny heap `String`s before any output — an OOM-abort vector under
+/// `panic = "abort"`. All slice bounds land on ASCII bytes.
+pub(crate) fn tokenize(d: &str) -> Vec<&str> {
     let mut out = Vec::new();
     let bytes = d.as_bytes();
     let mut i = 0;
     while i < bytes.len() {
         let c = bytes[i] as char;
         if c.is_ascii_alphabetic() {
-            out.push(c.to_string());
+            out.push(&d[i..i + 1]);
             i += 1;
         } else if c.is_ascii_digit() || c == '-' || c == '.' || c == '+' {
             let start = i;
@@ -23,7 +28,7 @@ pub(crate) fn tokenize(d: &str) -> Vec<String> {
                     break;
                 }
             }
-            out.push(d[start..i].to_string());
+            out.push(&d[start..i]);
         } else {
             i += 1;
         }
@@ -114,8 +119,8 @@ pub(crate) fn parse_path(d: &str) -> Vec<PathCmd> {
 /// Cursor state for [`parse_path`]: token stream, active command letter, the
 /// current point, and the subpath start (for `Z`). Each SVG command is one
 /// small method, so every piece stays simple and obviously bounds-checked.
-struct PathParser {
-    tokens: Vec<String>,
+struct PathParser<'a> {
+    tokens: Vec<&'a str>,
     i: usize,
     /// Active command letter; 0 = none seen yet.
     cmd: u8,
@@ -126,8 +131,8 @@ struct PathParser {
     cmds: Vec<PathCmd>,
 }
 
-impl PathParser {
-    fn new(d: &str) -> Self {
+impl<'a> PathParser<'a> {
+    fn new(d: &'a str) -> Self {
         PathParser {
             tokens: tokenize(d),
             i: 0,
@@ -142,7 +147,7 @@ impl PathParser {
 
     fn run(mut self) -> Vec<PathCmd> {
         while self.i < self.tokens.len() {
-            if is_command(&self.tokens[self.i]) {
+            if is_command(self.tokens[self.i]) {
                 self.cmd = self.tokens[self.i].as_bytes()[0];
                 self.i += 1;
             } else if self.cmd == 0 {
