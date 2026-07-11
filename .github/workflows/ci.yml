@@ -31,9 +31,15 @@ jobs:
       - name: Install cargo-deny
         uses: taiki-e/install-action@0631aa6515c7d545823c67cfae7ef4fc7f490154 # v2
         with:
-          tool: cargo-deny
+          # Pin the exact tool version so advisory results don't drift with
+          # upstream cargo-deny releases.
+          tool: cargo-deny@0.19.9
       - name: Advisory scan (RUSTSEC)
-        run: cargo deny check advisories
+        # Both Cargo workspaces: the root (engine + bindings) and the standalone
+        # Flutter FFI crate, which has its own lockfile the root scan can't see.
+        run: |
+          cargo deny check advisories
+          cargo deny --manifest-path apps/app/rust/Cargo.toml check advisories
       - name: Native FFI crate (apps/app/rust) builds + tests
         # Separate Cargo workspace (cargokit builds it per target). Not linted
         # with -D warnings here because it includes frb-generated code.

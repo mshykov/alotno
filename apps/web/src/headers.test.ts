@@ -19,7 +19,9 @@ describe("Cloudflare Pages _headers", () => {
   });
 
   it("sends HSTS to force HTTPS", () => {
-    expect(headers).toMatch(/Strict-Transport-Security:\s*max-age=\d+/);
+    // Pin includeSubDomains too — it's security-relevant and could otherwise be
+    // silently dropped without failing the test.
+    expect(headers).toMatch(/Strict-Transport-Security:\s*max-age=\d+;\s*includeSubDomains/);
   });
 
   it("keeps the supporting hardening headers", () => {
