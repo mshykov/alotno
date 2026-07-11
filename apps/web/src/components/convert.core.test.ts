@@ -54,6 +54,17 @@ describe("convertBatch", () => {
     expect(Object.keys(posts.at(-1).out)).toEqual(["IMG.svg"]);
   });
 
+  it("suffixes colliding output names instead of silently overwriting", () => {
+    // "logo.png" and "logo.PNG" both reduce to base "logo"; both must survive.
+    const posts = run(
+      { files: [file("logo.png"), file("logo.PNG")], formats: ["svg"] },
+      fakeWasm(),
+    );
+    const result = posts.at(-1);
+    expect(Object.keys(result.out).sort()).toEqual(["logo (2).svg", "logo.svg"]);
+    expect(result.failed).toEqual([]);
+  });
+
   it("isolates a failing format — the rest of the batch still succeeds", () => {
     const posts = run(
       { files: [file("a.png")], formats: ["svg", "pdf"] },

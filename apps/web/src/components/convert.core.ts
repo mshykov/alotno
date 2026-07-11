@@ -26,6 +26,21 @@ export interface WasmApi {
 type Post = (message: unknown) => void;
 
 /**
+ * A `base.fmt` key that isn't already in `taken`, suffixing " (2)", " (3)", …
+ * before the extension on collision. Without this, two inputs that reduce to the
+ * same base (e.g. "logo.png" + "logo.PNG", since the queue dedup is
+ * case-sensitive but the .png strip is not) would overwrite each other in the
+ * output map and ZIP — the user would silently get fewer files than converted.
+ */
+function uniqueKey(taken: Record<string, unknown>, base: string, fmt: string): string {
+  let key = `${base}.${fmt}`;
+  for (let n = 2; key in taken; n++) {
+    key = `${base} (${n}).${fmt}`;
+  }
+  return key;
+}
+
+/**
  * Convert every file into every requested format, posting a `progress` message
  * per file and a final `result`. Per-file/format try/catch means one bad PNG or
  * unsupported format can't abort the batch — it lands in `failed` instead.
@@ -53,7 +68,7 @@ export function convertBatch(
         else if (fmt === "dxf") data = enc.encode(wasm.pngToDxf(f.bytes, msg.opts));
         else if (fmt === "pdf") data = wasm.pngToPdf(f.bytes, msg.opts);
         else data = wasm.pngToWebp(f.bytes, 82, msg.lossless, msg.mono);
-        out[`${base}.${fmt}`] = data;
+        out[uniqueKey(out, base, fmt)] = data;
         outBytes += data.length;
       } catch (err) {
         failed.push({ name: f.name, fmt, error: String(err) });

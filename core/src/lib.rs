@@ -14,6 +14,19 @@
 //! Everything starts from one decode stage ([`decode`]) and a common
 //! [`RgbaImage`].
 
+// Panic-freedom is a hard contract here: the crate ships with `panic = "abort"`,
+// so any panic traps the whole WASM module / aborts the FFI host. These lints
+// keep panicking constructs out of production code (CI runs clippy with
+// `-D warnings`, so they are effectively deny). Test modules opt out.
+//
+// `clippy::indexing_slicing` / `clippy::string_slice` are intentionally NOT
+// enabled crate-wide yet: the SVG tokenizer has ~30 slice sites that are
+// verified total (fuzzed in `core/tests/path_parsers.rs`) and would each need an
+// `#[allow]`. Adopting them is tracked as a separate follow-up; input-panic
+// coverage is meanwhile enforced dynamically by those fuzz tests.
+#![warn(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 mod decode;
 mod options;
 mod raster;

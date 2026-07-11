@@ -28,7 +28,18 @@ pub(crate) fn encode(image: &RgbaImage, options: &WebpOptions) -> Result<Vec<u8>
     if options.lossless {
         encode_lossless_pure(img)
     } else {
-        encode_lossy(img, options.quality)
+        encode_lossy(img, sanitize_quality(options.quality))
+    }
+}
+
+/// libwebp expects quality in 0–100. A caller (JS/FFI) can pass NaN/inf/out-of-
+/// range; map non-finite to a sane default and clamp the rest so the encoder
+/// never receives a garbage value.
+fn sanitize_quality(q: f32) -> f32 {
+    if q.is_finite() {
+        q.clamp(0.0, 100.0)
+    } else {
+        75.0
     }
 }
 
@@ -75,4 +86,20 @@ fn encode_lossy(image: &RgbaImage, quality: f32) -> Result<Vec<u8>, ConvertError
 #[cfg(not(feature = "libwebp"))]
 fn encode_lossy(image: &RgbaImage, _quality: f32) -> Result<Vec<u8>, ConvertError> {
     encode_lossless_pure(image)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_quality;
+
+    #[test]
+    fn quality_is_sanitized_into_0_100() {
+        assert_eq!(sanitize_quality(f32::NAN), 75.0);
+        assert_eq!(sanitize_quality(f32::INFINITY), 75.0);
+        assert_eq!(sanitize_quality(f32::NEG_INFINITY), 75.0);
+        assert_eq!(sanitize_quality(-5.0), 0.0);
+        assert_eq!(sanitize_quality(150.0), 100.0);
+        // In-range values pass through untouched.
+        assert_eq!(sanitize_quality(82.0), 82.0);
+    }
 }

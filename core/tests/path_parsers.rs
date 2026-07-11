@@ -95,6 +95,17 @@ fn fill_none_path_is_skipped_in_eps() {
     assert!(!eps.contains("stroke\n"));
 }
 
+#[test]
+fn multibyte_fill_does_not_panic() {
+    // A fill value with multibyte UTF-8 ("#€€" — 6 bytes, 2 chars) cleared the
+    // byte-length guard in eps' hex_to_rgb and then sliced mid-codepoint,
+    // panicking on a non-char-boundary index. The `d` parsers were fuzzed but
+    // the fill/stroke attributes were not, so this was missed. Must degrade to
+    // the default paint, never abort.
+    let svg = r##"<svg width="10" height="10"><path d="M0 0 L1 1" fill="#€€"/></svg>"##;
+    assert!(svg_to_eps(svg).is_ok());
+}
+
 // --- Property tests: no input may panic ---
 
 proptest! {
@@ -116,5 +127,16 @@ proptest! {
     fn arbitrary_d_never_panics(d in r".{0,60}") {
         let _ = svg_to_eps(&svg_with_path(&d));
         let _ = svg_to_dxf(&svg_with_path(&d));
+    }
+
+    // Arbitrary fill/stroke values (incl. multibyte UTF-8) must not panic — the
+    // color parser slices these strings and had assumed ASCII.
+    #[test]
+    fn arbitrary_fill_and_stroke_never_panic(fill in r".{0,40}", stroke in r".{0,40}") {
+        let svg = format!(
+            r##"<svg width="100" height="100"><path d="M0 0 L1 1" fill="{fill}" stroke="{stroke}"/></svg>"##
+        );
+        let _ = svg_to_eps(&svg);
+        let _ = svg_to_dxf(&svg);
     }
 }

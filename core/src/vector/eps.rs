@@ -131,6 +131,14 @@ fn is_paint(s: &str) -> bool {
 /// `#rgb` or `#rrggbb` → 0.0–1.0 RGB triple.
 fn hex_to_rgb(h: &str) -> Option<(f64, f64, f64)> {
     let x = h.strip_prefix('#')?;
+    // Hex colors are ASCII hex digits only. Reject anything else *before*
+    // byte-slicing below: a multibyte value (e.g. "#€€") would clear the
+    // byte-length guard yet make `&full[a..a + 2]` land mid-codepoint and panic
+    // — fatal under `panic = "abort"`. After this check every byte offset is a
+    // valid char boundary.
+    if !x.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
     let full = if x.len() == 3 {
         x.chars().flat_map(|c| [c, c]).collect::<String>()
     } else {
