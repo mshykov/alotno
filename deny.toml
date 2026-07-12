@@ -22,4 +22,7 @@ ignore = [
   # ttf-parser: svg2pdf → fontdb/usvg/resvg font handling. Traced SVGs are
   # path-only (no <text>), so the font-parsing path is never exercised. Not a vuln.
   { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; via svg2pdf->resvg font path, unused (no text in traced SVG)" },
+  # rustybuzz: svg2pdf → resvg/usvg text shaping — same font path as ttf-parser
+  # above, unused because traced SVGs have no <text>. Unmaintained, not a vuln.
+  { id = "RUSTSEC-2026-0206", reason = "rustybuzz unmaintained; via svg2pdf->resvg text-shaping, unused (no text in traced SVG)" },
 ]
