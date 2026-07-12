@@ -26,6 +26,9 @@ describe("CSP script-src hashes", () => {
   });
 
   it("lists a matching sha256 hash in _headers for every inline script", async () => {
+    // Guard against a vacuous pass: if the regex ever stops matching, the loop
+    // below would run zero assertions and still go green.
+    expect(inlineScriptBodies.length).toBeGreaterThan(0);
     for (const body of inlineScriptBodies) {
       const hash = `sha256-${await sha256Base64(body)}`;
       expect(headers, `_headers script-src is missing ${hash}`).toContain(hash);
