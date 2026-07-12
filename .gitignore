@@ -23,6 +23,7 @@ node_modules/
 dist/
 .astro/
 .output/
+coverage/
 *.log
 
 # ---- Flutter / Dart ----
