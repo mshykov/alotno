@@ -2,7 +2,11 @@
 
 Working context carried over from an agent session so the next one can resume
 without re-deriving anything. **Baseline commit: `901e1aa`** (`main`, clean tree,
-CI green). Delete or rewrite this file once the outstanding items below are done.
+CI green).
+
+> **Transient file — delete it** once the outstanding items in §4 are done, along
+> with [next-session-prompt.md](next-session-prompt.md) and the "Resuming work"
+> section in `CLAUDE.md` that links to them.
 
 ---
 
@@ -98,7 +102,8 @@ codes in commit messages, never in source comments.**
 ### 4.1 Never audited — real coverage gap ⚠️
 
 Two of the four audit agents died on a session usage limit and their surfaces
-were **never covered**:
+were **never covered**. Ready-to-use prompts for both are in
+[next-session-prompt.md](next-session-prompt.md) — **B1** and **B2**.
 
 - **`apps/app` (Flutter shell + FFI boundary)** — completely unaudited. Unknowns:
   FFI panic/abort behaviour on the desktop/mobile host, path traversal when
@@ -248,8 +253,9 @@ cargo deny --manifest-path apps/app/rust/Cargo.toml check advisories
 cargo check -p alotno-wasm --target wasm32-unknown-unknown
 cargo test --manifest-path apps/app/rust/Cargo.toml
 
-# Web
-pnpm install
+# Web — same install flags as CI: --frozen-lockfile so the lockfile can't drift,
+# --ignore-scripts so no dependency lifecycle scripts run (S6505).
+pnpm install --frozen-lockfile --ignore-scripts
 pnpm --filter @alotno/design build             # tokens first — the build needs them
 wasm-pack build bindings/wasm --target web --out-dir pkg --release
 pnpm --filter @alotno/web test                 # 20 tests

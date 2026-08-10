@@ -34,14 +34,15 @@ things yet.
 
 ---
 
-## B. Finish the audit coverage gap (recommended first — highest value)
+## B1. Close the audit gap — `apps/app` (Flutter + FFI) *(recommended first)*
 
 ```text
 Read docs/session-handoff.md, section 4.1.
 
 Two audit surfaces were never covered because the agents died on a usage limit:
 (1) apps/app — the Flutter shell + its FFI boundary, and (2) a dedicated CI/CD +
-supply-chain pass. Run a proper security + architecture audit of apps/app now.
+supply-chain pass (see prompt B2). Run a proper security + architecture audit of
+apps/app now.
 
 Cover at minimum:
 - apps/app/rust: confirm it's a thin pass-through to core (no duplicated
@@ -63,6 +64,48 @@ Cover at minimum:
 Verify every claim against the actual code — do not take docs at face value.
 Report findings as a ranked list (severity, file:line, why it matters, concrete
 fix) plus a short list of strengths you actually confirmed. Don't change code yet.
+```
+
+---
+
+## B2. Close the audit gap — CI/CD + supply chain
+
+```text
+Read docs/session-handoff.md, sections 4.1 and 6.
+
+The CI/CD and supply-chain surface was written up from a previous session's
+first-hand observations but never got a dedicated audit pass. Do that now, for
+.github/ (ci.yml, deploy-web.yml, the build-wasm composite action), scripts/,
+sonar-project.properties, both Cargo workspaces, and the pnpm workspace.
+
+Cover at minimum:
+- Workflow security: trigger types (any pull_request_target / workflow_run?);
+  whether each job sets an explicit `permissions:` block or inherits a broad
+  default GITHUB_TOKEN; ${{ }} interpolation of untrusted input (PR titles,
+  branch names) into `run:` steps (script injection); cache poisoning;
+  artifact handling between the wasm and web jobs.
+- Secrets: confirm secrets are only in the env of steps that need them and are
+  never passed as CLI args or echoed. NEVER print a secret value — names only.
+  Do not read anything under _do_not_commit/.
+- Third-party actions: verify every `uses:` is pinned to a full commit SHA, and
+  that pinned tool versions (cargo-deny, wrangler) are exact, not floating.
+- Dependency/lockfile integrity: --frozen-lockfile and --ignore-scripts
+  everywhere; pubspec `--enforce-lockfile`; is Dependabot configured for actions,
+  npm AND cargo? Read .github/actions/build-wasm and flag any curl|sh installs.
+- Release path: scripts/release-macos.sh — signing/notarization credential
+  handling, and whether the release is built from a tag checkout or a dirty
+  working tree.
+- Repo hygiene: branch protection settings (query them), presence of
+  SECURITY.md / CODEOWNERS / CONTRIBUTING.md, license consistency.
+
+Note the known-good baseline so you don't re-report it: actions ARE SHA-pinned,
+CI installs with --frozen-lockfile --ignore-scripts, cargo-deny is pinned to
+0.19.9 and scans both workspaces, wrangler is pinned to 3.114.17, and the
+duplicate Cloudflare-native deploy path has been disconnected.
+
+Verify every claim against the actual files. Report a ranked list (severity,
+file:line, why it matters, concrete fix) plus strengths you actually confirmed.
+Don't change anything yet.
 ```
 
 ---
