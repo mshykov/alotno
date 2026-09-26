@@ -126,10 +126,11 @@ fn posterize_layer_difference(steps: u8) -> i32 {
 /// cutoff (vtracer's Binary mode does its own clustering otherwise).
 fn binarize(pixels: &[u8], threshold: u8) -> Vec<u8> {
     let mut out = Vec::with_capacity(pixels.len());
-    for px in pixels.chunks_exact(4) {
-        let lum = 0.299 * f32::from(px[0]) + 0.587 * f32::from(px[1]) + 0.114 * f32::from(px[2]);
+    let (px, _) = pixels.as_chunks::<4>();
+    for &[r, g, b, a] in px {
+        let lum = 0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b);
         let v = if lum <= f32::from(threshold) { 0 } else { 255 };
-        out.extend_from_slice(&[v, v, v, px[3]]);
+        out.extend_from_slice(&[v, v, v, a]);
     }
     out
 }
