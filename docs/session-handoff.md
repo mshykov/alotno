@@ -1,9 +1,10 @@
 # Session handoff — audit remediation & dependency modernization
 
 Working context carried over from agent sessions so the next one can resume
-without re-deriving anything. **Baseline commit: `504d99f`** (`main`, clean tree,
-CI green, no open PRs, production deployed from this commit). Last updated
-2026-09-26, after the clippy-fix / vitest 4 / Astro 7 session.
+without re-deriving anything. **Baseline commit: `3d729ef`** (`main`, clean tree,
+CI green, no open PRs; production last deployed from `504d99f` — nothing since
+touches the deployed paths). Last updated 2026-09-26, after the clippy-fix /
+vitest 4 / Astro 7 / npm-advisory / CI session.
 
 > **Transient file — delete it** once the outstanding items in §4 are done, along
 > with [next-session-prompt.md](next-session-prompt.md) and the "Resuming work"
@@ -48,6 +49,9 @@ aborts the FFI host.
 | [#92](https://github.com/mshykov/alotno/pull/92) | `binarize`: `chunks_exact(4)` → `as_chunks::<4>()` — clippy 1.98's new `chunks_exact_to_as_chunks` had turned `main` red |
 | [#93](https://github.com/mshykov/alotno/pull/93) | **vitest 3.2 → 4.1.11** in `design/` **and** `apps/web` (+ `@vitest/coverage-v8`) |
 | [#94](https://github.com/mshykov/alotno/pull/94) | **Astro 6.4.8 → 7.3.5** (Vite 8); `compressHTML: true` pinned; CSP re-verified on a real Pages preview |
+| [#95](https://github.com/mshykov/alotno/pull/95) | this handoff refreshed after #92–#94 |
+| [#96](https://github.com/mshykov/alotno/pull/96) | lockfile-only refresh clearing **all 8 npm advisories** (`fast-uri` ×6, `yaml`, `devalue`); `pnpm audit` clean, `dist/` byte-identical |
+| [#97](https://github.com/mshykov/alotno/pull/97) | CI: skip the ~14-min **native macOS + iOS build** for markdown-only changes (see §6) |
 
 Dependabot's bare bumps were **closed** in favour of deliberate migrations:
 [#81](https://github.com/mshykov/alotno/pull/81) (Astro 6) → #85;
@@ -171,29 +175,19 @@ dependency**. Plan:
 Lighter alternatives: fork vtracer and feature-gate `clap`/`image` behind a
 non-default `cli` feature, or upstream that as a PR to `visioncortex/vtracer`.
 
-### 4.3 Open npm security alerts — lockfile-only fix
+### 4.3 Dependabot & repo hygiene
 
-No Dependabot PRs are open, but **8 npm alerts** are (checked 2026-09-26 via
-`gh api repos/mshykov/alotno/dependabot/alerts?state=open`). All are transitive,
-and every patched version already fits the ranges declared upstream — so a
-**lockfile refresh fixes them; no `overrides` needed**:
-
-| Package | Locked | Patched | Pulled in by | Ships to users? |
-|---|---|---|---|---|
-| `fast-uri` (6 alerts, high) | 3.1.2 | ≥ 3.1.6 | `@astrojs/check` → language-server → `yaml-language-server` → `ajv` (`^3.0.1`) | no — dev-only type-check |
-| `yaml` (medium) | 2.7.1 | ≥ 2.8.3 | same chain; `@astrojs/language-server` 2.17.1 → `yaml-language-server ~1.23` pins 2.8.3 | no — dev-only |
-| `devalue` (medium) | 5.8.1 | ≥ 5.9.2 | `astro` (`^5.8.1`) | build-time only for this static site |
-
-Recipe (dry-run on `504d99f`: resolves `devalue` 5.9.4, `fast-uri` 3.1.8, `yaml`
-2.8.3 / 2.9.1, and leaves every `package.json` untouched): branch, then
-`pnpm update -r devalue fast-uri yaml @astrojs/language-server --ignore-scripts`,
-confirm with `pnpm why`, run the §7 web checks and confirm the built `dist/` is
-unchanged apart from content hashes. The two remaining alerts are Rust `atty` —
-that is **M2b** (§4.2).
-
-Note: there is **no `.github/dependabot.yml`**, so only *security* updates run.
-Two of those jobs (`js-yaml`, `smol-toml`) failed on `76329fa`; both advisories
-were resolved by #94 (Astro 7.3.5 pulls `js-yaml` 4.3.2 and `smol-toml` 1.9.0).
+- **npm alerts: none open** since #96 (was 8). The only open Dependabot alerts
+  are the two Rust `atty` ones — that is **M2b** (§4.2). Re-check with
+  `gh api 'repos/mshykov/alotno/dependabot/alerts?state=open'`.
+- **There is no `.github/dependabot.yml`**, so only *security* updates run — no
+  routine version PRs. Deliberate for now; if added, remember Dependabot bumps one
+  workspace at a time and misses cross-workspace couplings (§6).
+- **Merged PR branches are not auto-deleted.** Every squash-merge leaves its head
+  branch on `origin`. Enabling *Settings → General → Automatically delete head
+  branches* would stop the pile-up; that is a repo-settings change, so it needs
+  owner approval. Until then, verify a branch is contained in `main` (§6) before
+  deleting it.
 
 ### 4.4 Smaller / non-code
 
@@ -201,11 +195,10 @@ were resolved by #94 (Astro 7.3.5 pulls `js-yaml` 4.3.2 and `smol-toml` 1.9.0).
   migration verification. Wrangler v3 `pages deployment` has only `list`/`tail` —
   **no CLI delete**. Remove via *Workers & Pages → alotno → Deployments →
   `<name>` → ⋯ → Delete*. Harmless if left.
-- **Stale remote branches**, all squash-merged and verified fully contained in
-  `main` on 2026-09-26 (every file each branch touched is identical on `main`):
-  `deps/astro-7` (#94), `fix/clippy-as-chunks` (#92), `docs/session-handoff`
-  (#89), `fix/web-csp-hashes` (#82), `fix/web-icon-asset` (#77). Safe to delete,
-  but deleting branches needs owner approval.
+- **Remote branches of merged PRs #95–#97** (`docs/handoff-after-astro7`,
+  `fix/npm-transitive-advisories`, `ci/skip-native-on-docs`) plus this PR's own
+  branch are still on `origin` — see §4.3. The five older ones were deleted on
+  2026-09-26.
 - **M1** (§3) — lower `MAX_PIXELS` to ~40–50M or make it `target_arch`-conditional,
   and drop the full-buffer clone in `to_color_image`.
 - **Deferred clippy lints** — `clippy::indexing_slicing` / `clippy::string_slice`
@@ -319,6 +312,14 @@ Added after the clippy / vitest 4 / Astro 7 session (2026-09-26):
   `core/**`, `bindings/wasm/**` or `design/**` change — merging #94 deployed
   production by itself. `gh workflow run` is only needed for paths the filter
   skips.
+- **CI skips the native macOS + iOS build for markdown-only changes** (#97). A
+  `Detect changes` job diffs `HEAD^1..HEAD` (the PR merge commit against its base,
+  or the pushed squash commit) and `native-build` runs only if some path isn't
+  `.md`; renames list both sides, and an uncomputable diff runs the build. It is a
+  job-level `if`, **not** workflow `paths-ignore` — that would also skip the
+  required `Rust core` / `Web` checks and leave docs PRs stuck on "Expected —
+  waiting". Keep it that way if more jobs get gated. First confirmed skip: the
+  push of `3d729ef` (#95).
 - **No Rust toolchain on the owner's Mac** (as of 2026-09-26). Rust changes are
   verified by CI; for web work, pull the WASM bundle from a CI run instead of
   building it (see §7).
@@ -346,7 +347,7 @@ wasm-pack build bindings/wasm --target web --out-dir pkg --release
 #   gh run download <run-id> -n wasm-pkg -D bindings/wasm/pkg
 pnpm --filter @alotno/design test              # 13 tests
 pnpm --filter @alotno/web test                 # 20 tests
-pnpm --filter @alotno/web check                # astro check — expect 0 errors, 1 pre-existing hint
+pnpm --filter @alotno/web check                # astro check — expect 0 errors, 0 warnings, 0 hints (since #96)
 pnpm --filter @alotno/web build
 
 # Deploy (the ONLY sanctioned path — never re-add a second one). Runs by itself
