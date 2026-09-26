@@ -82,6 +82,39 @@ jobs:
         run: flutter test
         working-directory: apps/app
 
+  # ---- Change detection: lets the slow native build skip docs-only changes ----
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      native: ${{ steps.filter.outputs.native }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # A PR run checks out the merge commit, whose first parent is the base
+          # branch; a push to main checks out the squash/merge commit. Either
+          # way HEAD^1..HEAD is the whole change set, so two commits suffice.
+          fetch-depth: 2
+      - id: filter
+        # Markdown anywhere (docs/ holds only .md) never reaches the native
+        # build. Anything else — or a diff we can't compute — runs it.
+        # --no-renames lists both sides, so Foo.swift -> Foo.md still builds.
+        run: |
+          if ! changed=$(git diff --name-only --no-renames HEAD^1 HEAD); then
+            echo "::warning::Could not diff against HEAD^1; running the native build."
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -qvE '\.md$'; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "native=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Markdown-only change; skipping the native macOS + iOS build."
+          fi
+
   # ---- Native app build: compile the macOS + iOS shells ----
   # `flutter analyze`/`test` never compile the native app, so Swift/Podfile/
   # plugin-integration breakage (e.g. a missing `override`, a deployment-target
@@ -89,6 +122,9 @@ jobs:
   # Android stays out until the SDK/NDK toolchain is wired (see docs/roadmap.md).
   native-build:
     name: Native app build (macOS + iOS sim)
+    # Not a required check, so a skip never blocks a merge.
+    needs: [changes]
+    if: needs.changes.outputs.native == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
