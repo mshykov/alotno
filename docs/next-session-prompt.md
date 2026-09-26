@@ -100,8 +100,11 @@ Cover at minimum:
 
 Note the known-good baseline so you don't re-report it: actions ARE SHA-pinned,
 CI installs with --frozen-lockfile --ignore-scripts, cargo-deny is pinned to
-0.19.9 and scans both workspaces, wrangler is pinned to 3.114.17, and the
-duplicate Cloudflare-native deploy path has been disconnected.
+0.19.9 and scans both workspaces, wrangler is pinned to 3.114.17, the
+duplicate Cloudflare-native deploy path has been disconnected, and the
+`Detect changes` job that skips the native build for markdown-only changes is
+intentional (#97; job-level `if`, not `paths-ignore`, so required checks still
+report). Workflows have no top-level `permissions:` block — that one IS in scope.
 
 Verify every claim against the actual files. Report a ranked list (severity,
 file:line, why it matters, concrete fix) plus strengths you actually confirmed.
@@ -126,26 +129,7 @@ Work on a branch. Don't push until the harness passes and I've seen the results.
 
 ---
 
-## D. npm security alerts (lockfile-only)
-
-```text
-Read docs/session-handoff.md, section 4.3.
-
-Eight npm Dependabot alerts are open (fast-uri x6, yaml, devalue). All are
-transitive and every patched version fits the ranges already declared upstream,
-so this should be a lockfile-only change — no `overrides`, no package.json edits.
-
-First re-check the live state: `gh api
-'repos/mshykov/alotno/dependabot/alerts?state=open'` — the list may have moved.
-Then on a branch follow the recipe in 4.3, confirm each package with `pnpm why`,
-run the web checks from section 7, and diff the built dist/ against main's
-(content hashes aside it should be identical). One PR; don't touch the Rust
-`atty` alerts — those are M2b (prompt C).
-```
-
----
-
-## E. Housekeeping backlog
+## D. Housekeeping backlog
 
 ```text
 Read docs/session-handoff.md, section 4.4, and work through the smaller items
