@@ -126,22 +126,21 @@ Work on a branch. Don't push until the harness passes and I've seen the results.
 
 ---
 
-## D. Astro 7 (open Dependabot PR #88)
+## D. npm security alerts (lockfile-only)
 
 ```text
-Read docs/session-handoff.md, sections 4.3 and 5.
+Read docs/session-handoff.md, section 4.3.
 
-Dependabot PR #88 bumps astro 6.4.8 → 7.1.0 — another breaking major, right
-after the 5→6 migration. Assess it properly: read Astro's 6→7 upgrade guide,
-check whether the minimum Node rises again (CI is on 22 now), then migrate
-deliberately rather than merging the bump.
+Eight npm Dependabot alerts are open (fast-uri x6, yaml, devalue). All are
+transitive and every patched version fits the ranges already declared upstream,
+so this should be a lockfile-only change — no `overrides`, no package.json edits.
 
-Section 5 is mandatory reading: the CSP in apps/web/public/_headers pins the two
-is:inline theme scripts by sha256. If Astro 7 changes how is:inline is emitted,
-those hashes break and the theme scripts silently stop executing in production.
-Re-verify the hashes from the built dist/, and verify on a real Cloudflare Pages
-preview deploy (astro dev/preview does NOT apply _headers) — zero console CSP
-violations, theme toggle works.
+First re-check the live state: `gh api
+'repos/mshykov/alotno/dependabot/alerts?state=open'` — the list may have moved.
+Then on a branch follow the recipe in 4.3, confirm each package with `pnpm why`,
+run the web checks from section 7, and diff the built dist/ against main's
+(content hashes aside it should be identical). One PR; don't touch the Rust
+`atty` alerts — those are M2b (prompt C).
 ```
 
 ---

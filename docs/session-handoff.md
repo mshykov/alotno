@@ -1,8 +1,9 @@
 # Session handoff — audit remediation & dependency modernization
 
-Working context carried over from an agent session so the next one can resume
-without re-deriving anything. **Baseline commit: `901e1aa`** (`main`, clean tree,
-CI green).
+Working context carried over from agent sessions so the next one can resume
+without re-deriving anything. **Baseline commit: `504d99f`** (`main`, clean tree,
+CI green, no open PRs, production deployed from this commit). Last updated
+2026-09-26, after the clippy-fix / vitest 4 / Astro 7 session.
 
 > **Transient file — delete it** once the outstanding items in §4 are done, along
 > with [next-session-prompt.md](next-session-prompt.md) and the "Resuming work"
@@ -44,9 +45,36 @@ aborts the FFI host.
 | [#85](https://github.com/mshykov/alotno/pull/85) | **Astro 5.18.2 → 6.4.8** + CI/deploy Node 20 → 22 |
 | [#86](https://github.com/mshykov/alotno/pull/86) | tokio 1.34 → 1.52 (FFI crate lockfile) |
 | [#87](https://github.com/mshykov/alotno/pull/87) | align `@vitest/coverage-v8` with vitest 3; gitignore `coverage/` |
+| [#92](https://github.com/mshykov/alotno/pull/92) | `binarize`: `chunks_exact(4)` → `as_chunks::<4>()` — clippy 1.98's new `chunks_exact_to_as_chunks` had turned `main` red |
+| [#93](https://github.com/mshykov/alotno/pull/93) | **vitest 3.2 → 4.1.11** in `design/` **and** `apps/web` (+ `@vitest/coverage-v8`) |
+| [#94](https://github.com/mshykov/alotno/pull/94) | **Astro 6.4.8 → 7.3.5** (Vite 8); `compressHTML: true` pinned; CSP re-verified on a real Pages preview |
 
-[#81](https://github.com/mshykov/alotno/pull/81) (Dependabot's naive Astro 6 bump)
-was **closed** in favour of the deliberate migration in #85.
+Dependabot's bare bumps were **closed** in favour of deliberate migrations:
+[#81](https://github.com/mshykov/alotno/pull/81) (Astro 6) → #85;
+[#88](https://github.com/mshykov/alotno/pull/88) /
+[#90](https://github.com/mshykov/alotno/pull/90) (Astro 7) → #94;
+[#91](https://github.com/mshykov/alotno/pull/91) (vitest 4, `design/` only) → #93.
+
+### Astro 7 / Vite 8 — what changed and what was pinned
+
+Checked against an Astro 6 build of the same tree before merging #94:
+
+- **CSP hashes byte-identical** — `is:inline` is still emitted verbatim (§5).
+- **`compressHTML` default changed to `"jsx"`**, which strips whitespace between
+  inline elements (the macOS button rendered `</svg>Download for macOS`). Pinned
+  back to `compressHTML: true` in `astro.config.mjs`; the HTML then matched Astro 6
+  except for 3 whitespace-only spots between block/hidden elements.
+- **Vite 8 raised the default browser baseline** from Safari 16 / Chrome 107 /
+  Firefox 104 to **Safari/iOS 16.4, Chrome 111, Firefox 114**. Lightning CSS now
+  emits range media queries (`@media (width<=560px)`), which Safari < 16.4
+  ignores. **Accepted** — the project documents no browser floor and the converter
+  already needs module workers + WASM. If older Safari ever matters, set
+  `vite.build.target` / `cssTarget` explicitly.
+- CSS is re-minified by Lightning CSS (property order, lowercase hex, merged
+  rules) — semantically equivalent, verified rule by rule.
+- Node floor unchanged (≥ 22.12); CI and deploy stay on Node 22.
+- vitest had to move first: vitest 3 supports Vite ≤ 7 only. The lockfile now
+  carries a **single `vite@8.3.1`** shared by Astro and vitest.
 
 ### Also resolved outside of git
 
@@ -143,20 +171,41 @@ dependency**. Plan:
 Lighter alternatives: fork vtracer and feature-gate `clap`/`image` behind a
 non-default `cli` feature, or upstream that as a PR to `visioncortex/vtracer`.
 
-### 4.3 Open Dependabot PR — needs a decision
+### 4.3 Open npm security alerts — lockfile-only fix
 
-- **[#88](https://github.com/mshykov/alotno/pull/88) astro 6.4.8 → 7.1.0.**
-  Another **breaking major**, days after the 5→6 migration. Do *not* auto-merge:
-  repeat the §5 migration checklist, especially the **CSP hash re-verification**.
-  Check whether Astro 7 raises the minimum Node again (6 required ≥ 22.12; CI is
-  now on 22).
+No Dependabot PRs are open, but **8 npm alerts** are (checked 2026-09-26 via
+`gh api repos/mshykov/alotno/dependabot/alerts?state=open`). All are transitive,
+and every patched version already fits the ranges declared upstream — so a
+**lockfile refresh fixes them; no `overrides` needed**:
+
+| Package | Locked | Patched | Pulled in by | Ships to users? |
+|---|---|---|---|---|
+| `fast-uri` (6 alerts, high) | 3.1.2 | ≥ 3.1.6 | `@astrojs/check` → language-server → `yaml-language-server` → `ajv` (`^3.0.1`) | no — dev-only type-check |
+| `yaml` (medium) | 2.7.1 | ≥ 2.8.3 | same chain; `@astrojs/language-server` 2.17.1 → `yaml-language-server ~1.23` pins 2.8.3 | no — dev-only |
+| `devalue` (medium) | 5.8.1 | ≥ 5.9.2 | `astro` (`^5.8.1`) | build-time only for this static site |
+
+Recipe (dry-run on `504d99f`: resolves `devalue` 5.9.4, `fast-uri` 3.1.8, `yaml`
+2.8.3 / 2.9.1, and leaves every `package.json` untouched): branch, then
+`pnpm update -r devalue fast-uri yaml @astrojs/language-server --ignore-scripts`,
+confirm with `pnpm why`, run the §7 web checks and confirm the built `dist/` is
+unchanged apart from content hashes. The two remaining alerts are Rust `atty` —
+that is **M2b** (§4.2).
+
+Note: there is **no `.github/dependabot.yml`**, so only *security* updates run.
+Two of those jobs (`js-yaml`, `smol-toml`) failed on `76329fa`; both advisories
+were resolved by #94 (Astro 7.3.5 pulls `js-yaml` 4.3.2 and `smol-toml` 1.9.0).
 
 ### 4.4 Smaller / non-code
 
-- **`astro6-preview` Pages deployment** left over from migration verification.
-  Wrangler v3 `pages deployment` has only `list`/`tail` — **no CLI delete**.
-  Remove via *Workers & Pages → alotno → Deployments → `astro6-preview` → ⋯ →
-  Delete*. Harmless if left.
+- **`astro6-preview` and `astro7-preview` Pages deployments** left over from
+  migration verification. Wrangler v3 `pages deployment` has only `list`/`tail` —
+  **no CLI delete**. Remove via *Workers & Pages → alotno → Deployments →
+  `<name>` → ⋯ → Delete*. Harmless if left.
+- **Stale remote branches**, all squash-merged and verified fully contained in
+  `main` on 2026-09-26 (every file each branch touched is identical on `main`):
+  `deps/astro-7` (#94), `fix/clippy-as-chunks` (#92), `docs/session-handoff`
+  (#89), `fix/web-csp-hashes` (#82), `fix/web-icon-asset` (#77). Safe to delete,
+  but deleting branches needs owner approval.
 - **M1** (§3) — lower `MAX_PIXELS` to ~40–50M or make it `target_arch`-conditional,
   and drop the full-buffer clone in `to_color_image`.
 - **Deferred clippy lints** — `clippy::indexing_slicing` / `clippy::string_slice`
@@ -167,7 +216,8 @@ non-default `cli` feature, or upstream that as a PR to `visioncortex/vtracer`.
   `_do_not_commit/` from admin → analysis scope; store the `alotno-notary`
   credential and finish the **v1.2.0 macOS notarized release** (latest GitHub
   release is still v1.1.0).
-- **No retrospective entry** has been written for this session in
+- **No retrospective entries** have been written for the last two sessions
+  (audit remediation, and clippy/vitest 4/Astro 7) in
   [retrospectives.md](retrospectives.md) — the convention is a dated section per
   session. Lessons worth recording are in §6.
 
@@ -181,7 +231,7 @@ non-default `cli` feature, or upstream that as a PR to `visioncortex/vtracer`.
 styles.
 
 - Astro emits `is:inline` **verbatim**, so the hash of the *source* body equals
-  the hash the browser enforces — confirmed true on both Astro 5 and 6.
+  the hash the browser enforces — confirmed true on Astro 5, 6 and 7.
 - `apps/web/src/csp-script-hashes.test.ts` recomputes the hashes from
   `index.astro?raw` and asserts `_headers` still lists them, so **editing a theme
   script without updating the CSP fails CI** instead of silently refusing to run
@@ -201,11 +251,18 @@ styles.
   npx --yes wrangler@3.114.17 pages deploy apps/web/dist --project-name=alotno --branch=<name>
   ```
   Then check the browser console for zero CSP violations and confirm the theme
-  toggle still flips `data-theme` and persists to `localStorage`.
+  toggle still flips `data-theme` and persists to `localStorage`. Also reload
+  after toggling: the **before-paint** script must apply the stored theme on load
+  (it is the other hashed script). Finally run one real conversion — it exercises
+  `'wasm-unsafe-eval'` and `worker-src`.
+- A faster pre-check before the real deploy: serve `apps/web/dist` with a tiny
+  static server that sends the `/*` block of `_headers` as response headers; the
+  browser then enforces the real CSP locally. It does not replace the Pages
+  preview, but it catches hash drift without touching Cloudflare.
 
 ---
 
-## 6. Operational lessons from this session
+## 6. Operational lessons
 
 - **The advisory gate has a live-DB tradeoff.** `cargo deny` reads the RUSTSEC DB
   at run time, so a newly-published advisory turns CI red on **unrelated** PRs
@@ -239,6 +296,33 @@ styles.
   bug was real rather than theoretical. The seed is committed at
   `core/tests/path_parsers.proptest-regressions`.
 
+Added after the clippy / vitest 4 / Astro 7 session (2026-09-26):
+
+- **The floating `stable` toolchain is the second live gate.** CI installs
+  `toolchain: stable` and runs clippy with `-D warnings`, so a new lint in a Rust
+  release turns `main` red with no code change — Rust 1.98's
+  `chunks_exact_to_as_chunks` did exactly that (#92). Same playbook as the
+  advisory gate: check whether `main` itself is red before debugging a PR, and fix
+  it centrally first. Every PR's required check stays red until that fix lands.
+- **Check framework couplings before ordering majors.** Astro 7 brings Vite 8;
+  vitest 3 only supports Vite ≤ 7. Compare `npm view <pkg>@<ver> peerDependencies
+  dependencies.vite` across the set before deciding order. Dependabot's vitest PR
+  bumped only `design/` — it doesn't see cross-workspace couplings.
+- **Diff the built output across a framework major, not just the tests.** Tests
+  and `astro check` were green under Astro 7's new `compressHTML` default; only a
+  normalized HTML diff against the previous major showed the lost whitespace.
+- **Stacked PR + squash-merge ⇒ lockfile conflict.** After #93 was squashed,
+  #94 conflicted only on `pnpm-lock.yaml`. Resolved with a merge (no force-push):
+  `git checkout origin/main -- pnpm-lock.yaml && pnpm install --ignore-scripts &&
+  pnpm dedupe`, then confirmed the built `dist/` was byte-identical to before.
+- **`deploy-web.yml` auto-deploys on push to `main`** when `apps/web/**`,
+  `core/**`, `bindings/wasm/**` or `design/**` change — merging #94 deployed
+  production by itself. `gh workflow run` is only needed for paths the filter
+  skips.
+- **No Rust toolchain on the owner's Mac** (as of 2026-09-26). Rust changes are
+  verified by CI; for web work, pull the WASM bundle from a CI run instead of
+  building it (see §7).
+
 ---
 
 ## 7. Verification cheat-sheet
@@ -258,11 +342,15 @@ cargo test --manifest-path apps/app/rust/Cargo.toml
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm --filter @alotno/design build             # tokens first — the build needs them
 wasm-pack build bindings/wasm --target web --out-dir pkg --release
+#   no local Rust? take the bundle from a green CI run instead:
+#   gh run download <run-id> -n wasm-pkg -D bindings/wasm/pkg
+pnpm --filter @alotno/design test              # 13 tests
 pnpm --filter @alotno/web test                 # 20 tests
 pnpm --filter @alotno/web check                # astro check — expect 0 errors, 1 pre-existing hint
 pnpm --filter @alotno/web build
 
-# Deploy (the ONLY sanctioned path — never re-add a second one)
+# Deploy (the ONLY sanctioned path — never re-add a second one). Runs by itself
+# on a push to main that touches the web inputs; manual trigger:
 gh workflow run deploy-web.yml --ref main
 ```
 
