@@ -12,13 +12,13 @@ jobs:
     name: Rust core (test + wasm)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable # required when SHA-pinned (channel can't come from the ref)
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Format
         run: cargo fmt --all --check
       - name: Clippy (deny warnings)
@@ -29,7 +29,7 @@ jobs:
       # workspace lockfile. Accepted transitive advisories are documented in
       # deny.toml.
       - name: Install cargo-deny
-        uses: taiki-e/install-action@0631aa6515c7d545823c67cfae7ef4fc7f490154 # v2
+        uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with:
           # Pin the exact tool version so advisory results don't drift with
           # upstream cargo-deny releases.
@@ -50,7 +50,7 @@ jobs:
     name: WASM bundle
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.github/actions/build-wasm
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -62,7 +62,7 @@ jobs:
     name: Flutter (analyze + test)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: 3.44.1
@@ -91,7 +91,7 @@ jobs:
     outputs:
       native: ${{ steps.filter.outputs.native }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # A PR run checks out the merge commit, whose first parent is the base
           # branch; a push to main checks out the squash/merge commit. Either
@@ -127,12 +127,12 @@ jobs:
     if: needs.changes.outputs.native == 'true'
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # cargokit invokes cargo during the Flutter build; ensure a toolchain.
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: apps/app/rust
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
@@ -159,7 +159,7 @@ jobs:
     # Secrets aren't available to fork PRs; skip there rather than fail.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Full history — Sonar needs it for blame / new-code detection.
           fetch-depth: 0
@@ -185,13 +185,13 @@ jobs:
         with:
           toolchain: stable
           components: llvm-tools
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
-      - uses: taiki-e/install-action@0631aa6515c7d545823c67cfae7ef4fc7f490154 # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with:
           tool: cargo-llvm-cov
       - name: Rust coverage (lcov)
         run: cargo llvm-cov --workspace --all-features --lcov --output-path rust-lcov.info
-      - uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+      - uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -202,13 +202,13 @@ jobs:
     needs: [wasm]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Download WASM bundle
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: wasm-pkg
           path: bindings/wasm/pkg
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           # Astro 7 requires Node >= 22.12 (unchanged from 6).
