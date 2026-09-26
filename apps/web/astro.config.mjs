@@ -9,6 +9,10 @@ const wasmPkg = fileURLToPath(new URL("../../bindings/wasm/pkg", import.meta.url
 export default defineConfig({
   site: "https://alotno.app",
   output: "static",
+  // Astro 7 changed the default to "jsx", which strips whitespace between inline
+  // elements (e.g. an icon and its label). Keep HTML-style collapsing so the
+  // rendered markup matches what the page was designed against.
+  compressHTML: true,
   vite: {
     resolve: {
       // `@wasm` → the wasm-pack output, so components don't hardcode ../../.. paths.
