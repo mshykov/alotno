@@ -1,7 +1,7 @@
 # Session handoff — audit remediation & dependency modernization
 
 Working context carried over from agent sessions so the next one can resume
-without re-deriving anything. **Baseline commit: `3d729ef`** (`main`, clean tree,
+without re-deriving anything. **Baseline commit: `2e6e8a7`** (`main`, clean tree,
 CI green, no open PRs; production last deployed from `504d99f` — nothing since
 touches the deployed paths). Last updated 2026-09-26, after the clippy-fix /
 vitest 4 / Astro 7 / npm-advisory / CI session.
@@ -52,6 +52,7 @@ aborts the FFI host.
 | [#95](https://github.com/mshykov/alotno/pull/95) | this handoff refreshed after #92–#94 |
 | [#96](https://github.com/mshykov/alotno/pull/96) | lockfile-only refresh clearing **all 8 npm advisories** (`fast-uri` ×6, `yaml`, `devalue`); `pnpm audit` clean, `dist/` byte-identical |
 | [#97](https://github.com/mshykov/alotno/pull/97) | CI: skip the ~14-min **native macOS + iOS build** for markdown-only changes (see §6) |
+| [#98](https://github.com/mshykov/alotno/pull/98) | handoff brought up to date after #95–#97 |
 
 Dependabot's bare bumps were **closed** in favour of deliberate migrations:
 [#81](https://github.com/mshykov/alotno/pull/81) (Astro 6) → #85;
@@ -183,11 +184,11 @@ non-default `cli` feature, or upstream that as a PR to `visioncortex/vtracer`.
 - **There is no `.github/dependabot.yml`**, so only *security* updates run — no
   routine version PRs. Deliberate for now; if added, remember Dependabot bumps one
   workspace at a time and misses cross-workspace couplings (§6).
-- **Merged PR branches are not auto-deleted.** Every squash-merge leaves its head
-  branch on `origin`. Enabling *Settings → General → Automatically delete head
-  branches* would stop the pile-up; that is a repo-settings change, so it needs
-  owner approval. Until then, verify a branch is contained in `main` (§6) before
-  deleting it.
+- **Merged PR branches are auto-deleted** (`delete_branch_on_merge: true`,
+  enabled by the owner on 2026-09-26). No manual cleanup after a merge. Side
+  effect for stacked PRs: when the lower PR merges, GitHub retargets the upper one
+  to `main` — it still needs updating from `main` afterwards (§6). Local branches
+  are not touched; verify containment (§6) before deleting those.
 
 ### 4.4 Smaller / non-code
 
@@ -195,10 +196,6 @@ non-default `cli` feature, or upstream that as a PR to `visioncortex/vtracer`.
   migration verification. Wrangler v3 `pages deployment` has only `list`/`tail` —
   **no CLI delete**. Remove via *Workers & Pages → alotno → Deployments →
   `<name>` → ⋯ → Delete*. Harmless if left.
-- **Remote branches of merged PRs #95–#97** (`docs/handoff-after-astro7`,
-  `fix/npm-transitive-advisories`, `ci/skip-native-on-docs`) plus this PR's own
-  branch are still on `origin` — see §4.3. The five older ones were deleted on
-  2026-09-26.
 - **M1** (§3) — lower `MAX_PIXELS` to ~40–50M or make it `target_arch`-conditional,
   and drop the full-buffer clone in `to_color_image`.
 - **Deferred clippy lints** — `clippy::indexing_slicing` / `clippy::string_slice`
