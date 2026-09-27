@@ -1,5 +1,3 @@
-> Baseline: `MSH/docs/testing.md` (org common rules). Below: Alotno-specific rules.
-
 # Testing (Alotno)
 
 ## Rust core (`core/`)

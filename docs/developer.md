@@ -1,5 +1,3 @@
-> Baseline: `MSH/docs/developer.md` (org common rules). Below: Alotno-specific rules.
-
 # Developer (Alotno)
 
 ## Engine-centric monorepo

@@ -1,5 +1,3 @@
-> Baseline: `MSH/docs/security.md` (org common rules). Below: Alotno-specific rules.
-
 # Security (Alotno)
 
 - `core` is **panic-free by contract**: every public entry point returns
