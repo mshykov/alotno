@@ -1,5 +1,3 @@
-> Baseline: `MSH/docs/seo.md` (org common rules). Below: Alotno-specific rules.
-
 # SEO (Alotno)
 
 - Only the marketing/landing site (Astro → Cloudflare Pages at `alotno.app`) is
