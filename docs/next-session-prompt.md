@@ -86,7 +86,7 @@ Cover at minimum:
   artifact handling between the wasm and web jobs.
 - Secrets: confirm secrets are only in the env of steps that need them and are
   never passed as CLI args or echoed. NEVER print a secret value — names only.
-  Do not read anything under _do_not_commit/.
+  Do not read anything under _do-not-commit/.
 - Third-party actions: verify every `uses:` is pinned to a full commit SHA, and
   that pinned tool versions (cargo-deny, wrangler) are exact, not floating.
 - Dependency/lockfile integrity: --frozen-lockfile and --ignore-scripts
@@ -145,7 +145,7 @@ one at a time, verifying each before moving on:
   adopt them with #[allow] on the ~30 verified-total slice sites, or record the
   decision to keep them off.
 
-Two items need me, not you: rotating the Sonar token in _do_not_commit/ from
+Two items need me, not you: rotating the Sonar token in _do-not-commit/ from
 admin to analysis scope, and storing the alotno-notary credential to finish the
 v1.2.0 macOS notarized release. Remind me of both.
 ```

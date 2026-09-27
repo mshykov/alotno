@@ -203,7 +203,7 @@ non-default `cli` feature, or upstream that as a PR to `visioncortex/vtracer`.
   Rationale is recorded in `core/src/lib.rs`. `string_slice` is what would have
   caught H1.
 - **Carry-forward from the June retro** (still open): rotate the Sonar token in
-  `_do_not_commit/` from admin → analysis scope; store the `alotno-notary`
+  `_do-not-commit/` from admin → analysis scope; store the `alotno-notary`
   credential and finish the **v1.2.0 macOS notarized release** (latest GitHub
   release is still v1.1.0).
 - **No retrospective entries** have been written for the last two sessions

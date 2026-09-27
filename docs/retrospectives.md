@@ -39,7 +39,7 @@ tech-debt sweep (#68–#71), and the v1.2.0 release prep (#72).
   positive out loud — e.g. the "console error" Lighthouse logged was a Perplexity
   browser-extension font our CSP correctly blocked, not site code. Said so
   rather than "fixing" a non-bug.
-- **Caught a latent secret leak.** The `_do_not_commit/` dir wasn't gitignored
+- **Caught a latent secret leak.** The `_do-not-commit/` dir wasn't gitignored
   (org convention is `_do-not-commit/`); flagged and fixed before any `git add`
   could stage the Sonar token.
 
@@ -78,7 +78,7 @@ tech-debt sweep (#68–#71), and the v1.2.0 release prep (#72).
 
 ### Carry-forward backlog (not code — needs a human)
 
-- Rotate the Sonar token in `_do_not_commit/` from admin scope to analysis scope
+- Rotate the Sonar token in `_do-not-commit/` from admin scope to analysis scope
   (nothing automated needs admin anymore).
 - Store the `alotno-notary` credential, then finish the v1.2.0 macOS release
   (notarized DMG + GitHub release). See [releasing-macos.md](releasing-macos.md).

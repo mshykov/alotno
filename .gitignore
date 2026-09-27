@@ -52,8 +52,10 @@ design/dist/
 # Release artifacts
 *.dmg
 
-# Local secrets — never commit (org convention + underscore variant)
+# Local secrets — never commit. The folder is _do-not-commit/ in every project.
 _do-not-commit/
+# Old spelling — ignored only so a stale copy (e.g. on the old laptop) can't be
+# committed. Never create it; the folder is always _do-not-commit/.
 _do_not_commit/
 
 # Xcode SwiftPM workspace state (generated)
