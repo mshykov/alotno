@@ -59,6 +59,19 @@ ad-hoc deploys.
 > The Pages project (`alotno`) must already exist (it does). The workflow deploys
 > to its `main` branch = production.
 
+## Monitoring
+
+- **Uptime (5 min):** UptimeRobot HTTP(s) monitor 804122870 on `https://alotno.app`. Email alert to the owner. Catches the site being
+  down or answering 5xx/52x; it can't see content (Keyword monitors can't be created
+  on the free plan).
+- **Content + TLS (daily):** `mshykov/shykov.dev` → `.github/workflows/site-monitor.yml`
+  runs `scripts/site-check.sh` at 06:17 UTC — HTTP 200, keyword `Alotno` in the HTML,
+  every certificate on the redirect path valid > 14 days. A failure opens (or comments
+  on) a "Site check failing" issue in that repo.
+- **Cert:** Cloudflare's edge cert (Pages custom domain), renewed by Cloudflare.
+- **If the domain or the page `<title>` changes,** update `SITES` in shykov.dev's `scripts/site-check.sh` (and the
+  UptimeRobot monitor if the URL changes) at the same time, or the daily check goes red.
+
 ## Notes
 - The repo can stay **private**; Wrangler upload doesn't expose it. (Git
   integration would require granting Cloudflare access to the private repo.)
