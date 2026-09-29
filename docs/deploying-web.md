@@ -62,14 +62,16 @@ ad-hoc deploys.
 ## Monitoring
 
 - **Uptime (5 min):** UptimeRobot HTTP(s) monitor 804122870 on `https://alotno.app`. Email alert to the owner. Catches the site being
-  down or answering 5xx/52x; it can't see content (Keyword monitors can't be created
-  on the free plan).
+  down or answering 5xx/52x; an HTTP(s) monitor doesn't check page content — the
+  daily check below does.
 - **Content + TLS (daily):** `mshykov/shykov.dev` → `.github/workflows/site-monitor.yml`
   runs `scripts/site-check.sh` at 06:17 UTC — HTTP 200, keyword `Alotno` in the HTML,
-  every certificate on the redirect path valid > 14 days. A failure opens (or comments
+  the TLS certificate of the requested host (and of the final host, if it
+  redirects) valid > 14 days. A failure opens (or comments
   on) a "Site check failing" issue in that repo.
 - **Cert:** Cloudflare's edge cert (Pages custom domain), renewed by Cloudflare.
-- **If the domain or the page `<title>` changes,** update `SITES` in shykov.dev's `scripts/site-check.sh` (and the
+- **If the URL changes, or the keyword `Alotno` disappears from the page** (it comes
+  from the `<title>`), update `SITES` in shykov.dev's `scripts/site-check.sh` (and the
   UptimeRobot monitor if the URL changes) at the same time, or the daily check goes red.
 
 ## Notes
